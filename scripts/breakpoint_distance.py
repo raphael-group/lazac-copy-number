@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+import seaborn as sns
 import heapq
 import pandas as pd
 import numpy as np
@@ -119,6 +122,10 @@ def parse_arguments():
         "cnp_profile", help="CNP profile TSV"
     )
 
+    parser.add_argument(
+        "medicc2_distances", help="MEDICC2 pairwise distances"
+    )
+
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -133,5 +140,27 @@ if __name__ == "__main__":
            d = p1.breakpoints().distance(p2.breakpoints())
            pairwise_distances.loc[n1, n2] = d
 
-   print(pairwise_distances)
-        
+   medicc2_pairwise_distances = pd.read_csv(args.medicc2_distances, sep="\t", index_col=0)\
+                                  .drop(columns=["diploid"], index=["diploid"])
+
+   results = pd.concat([pairwise_distances, medicc2_pairwise_distances])\
+               .stack()\
+               .groupby(level=[0,1])\
+               .apply(tuple)\
+               .unstack()
+
+   results = [r for r in results.to_numpy().flatten() if r != (0, 0)]
+   xs, ys = zip(*results)
+
+   fig, ax = plt.subplots()
+   sns.scatterplot(x=xs, y=ys, ax=ax)
+   ax.set_xlabel("Breakpoint Distance")
+   ax.set_ylabel("MEDICC2 Distance")
+
+   regression = stats.linregress(xs, ys)
+   reg_xs = np.linspace(min(xs), max(xs), 1000)
+   reg_ys = reg_xs*regression.slope + regression.intercept
+   ax.plot(reg_xs, reg_ys, linestyle="dashed")
+   ax.text(0.6, 0.2, f"R^2 = {regression.rvalue:.4}\nP-Value = {regression.pvalue:.4}", transform=ax.transAxes)
+
+   plt.show()
