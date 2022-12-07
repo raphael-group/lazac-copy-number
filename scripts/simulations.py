@@ -69,7 +69,7 @@ def sample_tree(nleaves, nloci, max_event_length=50) -> EventTree:
     # Add on events to create EventTree
     T = nx.relabel_nodes(T, dict(zip(T.nodes, labels)))
     T = EventTree(T, [])
-    T.get_root = lambda self: root_node
+    T.get_root = lambda: root_node
 
     return T
 
@@ -80,21 +80,49 @@ def parse_arguments():
 
     parser.add_argument("-l", "--nloci", help="Number of loci (bins)", default=200)
     parser.add_argument("-n", "--ncells", help="Size of tree (cells)", default=20)
-    parser.add_argument("--output", help="Output prefix", default="sim_")
+    parser.add_argument("--output", help="Output prefix", default="sim")
 
     return parser.parse_args()
 
 if __name__ == "__main__":
-    random.seed(73)
-    np.random.seed(73)
-
-
     args = parse_arguments()
+
+    np.random.seed(73)
+    random.seed(73)
     
     event_tree = sample_tree(args.ncells, args.nloci)
+    node_renaming_dict = dict(zip(event_tree.tree.nodes, range(len(event_tree.tree.nodes))))
 
+    # Output copy number profile information for
+    # all (including internal) nodes
+    cn_profiles, _ = event_tree.get_node_to_counts_and_brkps(2, args.nloci)
+    with open(f"{args.output}_full_cn_profiles.csv", "w") as f:
+        f.write("node,chrom,start,end,cn_a\n")
+        for (node, profile) in cn_profiles.items():
+            sample_id = node_renaming_dict[node]
+            for (i, v) in enumerate(profile):
+                f.write(f"{sample_id},1,{i},{i},{v}\n")
+
+    with open(f"{args.output}_cn_profiles.csv", "w") as f:
+        f.write("node,chrom,start,end,cn_a\n")
+        for (node, profile) in cn_profiles.items():
+            if len(event_tree.tree[node]) != 0:
+                continue
+            sample_id = node_renaming_dict[node]
+            for (i, v) in enumerate(profile):
+                f.write(f"{sample_id},1,{i},{i},{v}\n")
+
+    tree = nx.relabel_nodes(event_tree.tree, node_renaming_dict)
+    with open(f"{args.output}_tree.newick", "w") as f:
+        f.write(tree_to_newick(tree))
+
+    with open(f"{args.output}_edgelist.csv", "w") as f:
+        f.write("src,dst\n")
+        for (src, dst) in tree.edges:
+            f.write(f"{src},{dst}\n")
+    
     plt.figure(3, figsize=(12, 12))
-    pos = graphviz_layout(event_tree.tree, prog="dot")
-    nx.draw(event_tree.tree, pos=pos, with_labels=True, node_color="grey", node_size=60, verticalalignment="bottom",
+    pos = graphviz_layout(tree, prog="dot")
+    nx.draw(tree, pos=pos, with_labels=True, node_color="grey", node_size=60, verticalalignment="bottom",
             font_size=20, edge_color="grey", font_color="green")
-    plt.show()
+    plt.savefig(f"{args.output}_tree.pdf")
