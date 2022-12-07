@@ -51,7 +51,7 @@ def simulate_topology(ncells, random_seed=73):
 Creates a copy number tree using Cassiopeia's
 topology and CONET's copy number sampler.
 """
-def sample_tree(nleaves, nloci, max_event_length=50, random_seed=0) -> EventTree:
+def sample_tree(nleaves, nloci, max_event_length=40, random_seed=0) -> EventTree:
     cn_sampler = CNSampler.create_default_sampler()
     event_sampler = EventSampler()
     event_sampler.max_event_length = max_event_length
@@ -78,7 +78,7 @@ def parse_arguments():
         description="Simulates a copy-number tree and profile for a single chromosome."
     )
 
-    parser.add_argument("-l", "--nloci", help="Number of loci (bins)", default=200, type=int)
+    parser.add_argument("-l", "--nloci", help="Number of loci (bins)", default=400, type=int)
     parser.add_argument("-n", "--ncells", help="Size of tree (cells)", default=20, type=int)
     parser.add_argument("-s", "--seed", help="Random seed", default=0, type=int)
     parser.add_argument("--output", help="Output prefix", default="sim")
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         for (node, profile) in cn_profiles.items():
             sample_id = node_renaming_dict[node]
             for (i, v) in enumerate(profile):
-                f.write(f"{sample_id},1,{i},{i},{v}\n")
+                f.write(f"{sample_id},1,{i},{i},{int(v)}\n")
 
     with open(f"{args.output}_cn_profiles.csv", "w") as f:
         f.write("node,chrom,start,end,cn_a\n")
@@ -111,11 +111,20 @@ if __name__ == "__main__":
                 continue
             sample_id = node_renaming_dict[node]
             for (i, v) in enumerate(profile):
-                f.write(f"{sample_id},1,{i},{i},{v}\n")
+                f.write(f"{sample_id},1,{i},{i},{int(v)}\n")
+
+    with open(f"{args.output}_cn_profiles_medicc2.tsv", "w") as f:
+        f.write("sample_id\tchrom\tstart\tend\tcn_a\n")
+        for (node, profile) in cn_profiles.items():
+            if len(event_tree.tree[node]) != 0:
+                continue
+            sample_id = node_renaming_dict[node]
+            for (i, v) in enumerate(profile):
+                f.write(f"sample_{sample_id}\tchr1\t{2*i}\t{2*i+1}\t{int(v)}\n")
 
     tree = nx.relabel_nodes(event_tree.tree, node_renaming_dict)
     with open(f"{args.output}_tree.newick", "w") as f:
-        f.write(tree_to_newick(tree))
+        f.write(tree_to_newick(tree) + ";")
 
     with open(f"{args.output}_edgelist.csv", "w") as f:
         f.write("src,dst\n")

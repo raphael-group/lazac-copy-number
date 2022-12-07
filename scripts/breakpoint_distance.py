@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 
+from skbio import DistanceMatrix, TreeNode
+from skbio.tree import nj
+
 import argparse
 import heapq
-import os
-
-import scipy.stats as stats
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 import numpy as np
 
@@ -55,7 +53,7 @@ class ChromosomeCopyNumberProfile:
     chromosome: str
 
     def breakpoints(self, wgd=0) -> ChromosomeBreakpointProfile:
-        synthetic_gene = [[1 + wgd], [1 + wgd]]
+        synthetic_gene = [[2 + wgd]]
         breakpoint_profile = np.hstack((synthetic_gene, self.profile))
         breakpoint_profile = self.profile - breakpoint_profile[:, :-1] 
         return ChromosomeBreakpointProfile(
@@ -122,60 +120,41 @@ def process_copy_number_profile_df(df : pd.DataFrame) -> CopyNumberProfile:
 
     def process_copy_number_profile_chrm(chrm_df):
         bins = chrm_df.apply(lambda r: Bin(r.start, r.end), axis=1).to_list()
-        profile = chrm_df[["cn_a", "cn_b"]].to_numpy().T
+        profile = chrm_df[["cn_a"]].to_numpy().T
         return ChromosomeCopyNumberProfile(bins, profile, chrm_df.name)
 
     return CopyNumberProfile(list(df.groupby("chrom").apply(process_copy_number_profile_chrm)))
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Computes breakpoint distance matrix from CNPs"
+        description="Computes breakpoint distance matrix from copy number profiles."
     )
 
     parser.add_argument(
-        "cnp_profile", help="CNP profile TSV"
+        "cnp_profile", help="CNP profile CSV"
     )
 
     parser.add_argument(
-        "medicc2_distances", help="MEDICC2 pairwise distances"
+        "--output", help="Output prefix.", default="breaked"
     )
 
     return parser.parse_args()
 
 if __name__ == "__main__":
-   args = parse_arguments()
+    args = parse_arguments()
 
-   cnp_profiles = pd.read_csv(args.cnp_profile, sep="\t")
-   cnp_profiles = cnp_profiles.groupby("sample_id").apply(process_copy_number_profile_df)
+    cnp_profiles = pd.read_csv(args.cnp_profile, sep=",")
+    cnp_profiles = cnp_profiles.groupby("node").apply(process_copy_number_profile_df)
 
-   pairwise_distances = pd.DataFrame(columns=cnp_profiles.index)
-   for (n1, p1) in cnp_profiles.items():
-       for (n2, p2) in cnp_profiles.items():
-           # ds = [p1.breakpoints(wgd=w1).distance(p2.breakpoints(wgd=w2)) for w1 in range(5) for w2 in range(5)]
-           pairwise_distances.loc[n1, n2] = p1.breakpoints().distance(p2.breakpoints()) # min(ds)
+    pairwise_distances = pd.DataFrame(columns=cnp_profiles.index)
+    for (n1, p1) in cnp_profiles.items():
+        for (n2, p2) in cnp_profiles.items():
+            pairwise_distances.loc[n1, n2] = p1.breakpoints().distance(p2.breakpoints())
 
-   medicc2_pairwise_distances = pd.read_csv(args.medicc2_distances, sep="\t", index_col=0)\
-                                  .drop(columns=["diploid"], index=["diploid"])
+    names = pairwise_distances.columns
+    dm = DistanceMatrix(pairwise_distances.to_numpy(), list(map(str, names)))
 
-   results = pd.concat([pairwise_distances, medicc2_pairwise_distances])\
-               .stack()\
-               .groupby(level=[0,1])\
-               .apply(tuple)\
-               .unstack()
+    tree = nj(dm)
 
-   results = [r for r in results.to_numpy().flatten() if r != (0, 0)]
-   xs, ys = zip(*results)
-
-   fig, ax = plt.subplots()
-   sns.scatterplot(x=xs, y=ys, ax=ax)
-   ax.set_xlabel("Breakpoint Distance")
-   ax.set_ylabel("MEDICC2 Distance")
-
-   regression = stats.linregress(xs, ys)
-   reg_xs = np.linspace(min(xs), max(xs), 1000)
-   reg_ys = reg_xs*regression.slope + regression.intercept
-   ax.plot(reg_xs, reg_xs, linestyle="dashed", color="grey")
-   ax.plot(reg_xs, reg_ys, linestyle="dashed")
-   ax.text(0.6, 0.2, f"R^2 = {regression.rvalue:.4}\nP-Value = {regression.pvalue:.4}", transform=ax.transAxes)
-
-   plt.savefig(f"figures/{os.path.basename(args.cnp_profile)[:-13]}.pdf")
+    pairwise_distances.to_csv(f"{args.output}_pairwise_distances.csv")
+    tree.write(f"{args.output}_inferred_tree.newick")
