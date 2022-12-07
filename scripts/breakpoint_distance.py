@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 
+import argparse
+import heapq
+import os
+
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 import seaborn as sns
-import heapq
 import pandas as pd
 import numpy as np
-import argparse
 
 @dataclass(frozen=True)
 class Bin:
@@ -176,4 +178,4 @@ if __name__ == "__main__":
    ax.plot(reg_xs, reg_ys, linestyle="dashed")
    ax.text(0.6, 0.2, f"R^2 = {regression.rvalue:.4}\nP-Value = {regression.pvalue:.4}", transform=ax.transAxes)
 
-   plt.show()
+   plt.savefig(f"figures/{os.path.basename(args.cnp_profile)[:-13]}.pdf")
