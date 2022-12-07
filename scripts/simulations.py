@@ -51,13 +51,13 @@ def simulate_topology(ncells, random_seed=73):
 Creates a copy number tree using Cassiopeia's
 topology and CONET's copy number sampler.
 """
-def sample_tree(nleaves, nloci, max_event_length=50) -> EventTree:
+def sample_tree(nleaves, nloci, max_event_length=50, random_seed=0) -> EventTree:
     cn_sampler = CNSampler.create_default_sampler()
     event_sampler = EventSampler()
     event_sampler.max_event_length = max_event_length
 
     # Create topology
-    T = simulate_topology(nleaves)
+    T = simulate_topology(nleaves, random_seed=random_seed)
     events = event_sampler.sample_events(nloci, len(T.nodes) - 1)
 
     # Sample events for every node in topology
@@ -78,8 +78,9 @@ def parse_arguments():
         description="Simulates a copy-number tree and profile for a single chromosome."
     )
 
-    parser.add_argument("-l", "--nloci", help="Number of loci (bins)", default=200)
-    parser.add_argument("-n", "--ncells", help="Size of tree (cells)", default=20)
+    parser.add_argument("-l", "--nloci", help="Number of loci (bins)", default=200, type=int)
+    parser.add_argument("-n", "--ncells", help="Size of tree (cells)", default=20, type=int)
+    parser.add_argument("-s", "--seed", help="Random seed", default=0, type=int)
     parser.add_argument("--output", help="Output prefix", default="sim")
 
     return parser.parse_args()
@@ -87,10 +88,10 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
 
-    np.random.seed(73)
-    random.seed(73)
+    np.random.seed(73 + args.seed)
+    random.seed(73 + args.seed)
     
-    event_tree = sample_tree(args.ncells, args.nloci)
+    event_tree = sample_tree(args.ncells, args.nloci, random_seed=args.seed)
     node_renaming_dict = dict(zip(event_tree.tree.nodes, range(len(event_tree.tree.nodes))))
 
     # Output copy number profile information for
