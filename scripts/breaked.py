@@ -157,4 +157,4 @@ if __name__ == "__main__":
     tree = nj(dm)
 
     pairwise_distances.to_csv(f"{args.output}_pairwise_distances.csv")
-    tree.write(f"{args.output}_inferred_tree.newick")
+    tree.write(f"{args.output}_tree.newick")

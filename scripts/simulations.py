@@ -51,7 +51,9 @@ def simulate_topology(ncells, random_seed=73):
 Creates a copy number tree using Cassiopeia's
 topology and CONET's copy number sampler.
 """
-def sample_tree(nleaves, nloci, max_event_length=40, random_seed=0) -> EventTree:
+def sample_tree(nleaves, nloci, max_event_length=500, random_seed=0) -> EventTree:
+    max_event_length = nloci // 2
+
     cn_sampler = CNSampler.create_default_sampler()
     event_sampler = EventSampler()
     event_sampler.max_event_length = max_event_length

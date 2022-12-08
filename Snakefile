@@ -1,5 +1,5 @@
 ncells = [20, 40, 80]
-nloci  = [100, 200, 400, 800]
+nloci  = [400, 800, 1200]
 seeds  = [0, 1, 2, 3]
 
 simulation_instances = expand(
@@ -7,9 +7,20 @@ simulation_instances = expand(
     cells=ncells, loci=nloci, seed=seeds
 )
 
+breaked_nj_instances = expand(
+    "data/simulations/results/breaked_nj/n{cells}_l{loci}_s{seed}_eval.txt", 
+    cells=ncells, loci=nloci, seed=seeds
+)
+
+medicc2_instances = expand(
+    "data/simulations/results/medicc2/n{cells}_l{loci}_s{seed}_eval.txt",
+    cells=ncells, loci=nloci, seed=seeds
+)
+
 rule all:
     input:
-        simulation_instances
+        breaked_nj_instances,
+        medicc2_instances
 
 rule conet_simulation:
     output:
@@ -21,3 +32,60 @@ rule conet_simulation:
     shell:
         "python scripts/simulations.py -l {wildcards.loci} -n {wildcards.ncells} -s {wildcards.seed}"
         " --output data/simulations/ground_truth/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
+
+rule breaked_nj:
+    input:
+        cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles.csv",
+    output:
+        tree = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
+        pairwise_distances = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_pairwise_distances.csv"
+    benchmark:
+        "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}.benchmark.txt"
+    shell:
+        "python scripts/breaked.py {input.cn_profiles} --output "
+        "data/simulations/breaked_nj/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
+
+rule medicc2:
+    input:
+        medicc2_cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles_medicc2.tsv",
+    output:
+        tree = "data/simulations/medicc2/n{ncells}_l{loci}_s{seed}_final_tree.new",
+        pairwise_distances = "data/simulations/medicc2/n{ncells}_l{loci}_s{seed}_pairwise_distances.tsv"
+    benchmark:
+        "data/simulations/medicc2/n{ncells}_l{loci}_s{seed}.benchmark.txt"
+    shell:
+        "/n/fs/ragr-data/users/schmidt/miniconda3/envs/medicc2/bin/medicc2 "
+        "-p n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed} -a 'cn_a' --input-type tsv --total-copy-numbers "
+        "{input.medicc2_cn_profiles} data/simulations/medicc2/"
+
+# removes sample_ from these which 
+# are required for medicc2 to properly function
+rule medicc2_post_processed:
+    input:
+        tree = "data/simulations/medicc2/n{ncells}_l{loci}_s{seed}_final_tree.new",
+        pairwise_distances = "data/simulations/medicc2/n{ncells}_l{loci}_s{seed}_pairwise_distances.tsv"
+    output:
+        tree = "data/simulations/medicc2/n{ncells}_l{loci}_s{seed}_tree.post.newick",
+        pairwise_distances = "data/simulations/medicc2/n{ncells}_l{loci}_s{seed}_pairwise_distances.post.tsv"
+    shell:
+        "sed 's/sample_//g' {input.tree} > {output.tree} && sed 's/sample_//g' {input.pairwise_distances} > {output.pairwise_distances}"
+
+rule breaked_nj_perf_compare:
+    input:
+        tree = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
+        ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
+    output:
+        eval_file = "data/simulations/results/breaked_nj/n{ncells}_l{loci}_s{seed}_eval.txt"
+    shell:
+        "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -r {input.ground_truth_tree} -i {input.tree} "
+        " -d rf qt tt -o {output.eval_file}"
+
+rule medicc2_perf_compare:
+    input:
+        tree = "data/simulations/medicc2/n{ncells}_l{loci}_s{seed}_tree.post.newick",
+        ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
+    output:
+        eval_file = "data/simulations/results/medicc2/n{ncells}_l{loci}_s{seed}_eval.txt"
+    shell:
+        "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
+        " -d rf qt tt -o {output.eval_file}"
