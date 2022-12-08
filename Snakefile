@@ -7,9 +7,10 @@ simulation_instances = expand(
     cells=ncells, loci=nloci, seed=seeds
 )
 
+breaked_distances = ["breaked", "hamming", "rectilinear"]
 breaked_nj_instances = expand(
-    "data/simulations/results/breaked_nj/n{cells}_l{loci}_s{seed}_eval.txt", 
-    cells=ncells, loci=nloci, seed=seeds
+    "data/simulations/results/{dist}_nj/n{cells}_l{loci}_s{seed}_eval.txt", 
+    cells=ncells, loci=nloci, seed=seeds, dist=breaked_distances
 )
 
 medicc2_instances = expand(
@@ -33,17 +34,17 @@ rule conet_simulation:
         "python scripts/simulations.py -l {wildcards.loci} -n {wildcards.ncells} -s {wildcards.seed}"
         " --output data/simulations/ground_truth/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
 
-rule breaked_nj:
+rule nj:
     input:
         cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles.csv",
     output:
-        tree = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
-        pairwise_distances = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_pairwise_distances.csv"
+        tree = "data/simulations/{dist}_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
+        pairwise_distances = "data/simulations/{dist}_nj/n{ncells}_l{loci}_s{seed}_pairwise_distances.csv"
     benchmark:
-        "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}.benchmark.txt"
+        "data/simulations/{dist}_nj/n{ncells}_l{loci}_s{seed}.benchmark.txt"
     shell:
-        "python scripts/breaked.py {input.cn_profiles} --output "
-        "data/simulations/breaked_nj/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
+        "python scripts/breaked.py {input.cn_profiles} --distance {wildcards.dist} --output "
+        "data/simulations/{wildcards.dist}_nj/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
 
 rule medicc2:
     input:
@@ -70,12 +71,12 @@ rule medicc2_post_processed:
     shell:
         "sed 's/sample_//g' {input.tree} > {output.tree} && sed 's/sample_//g' {input.pairwise_distances} > {output.pairwise_distances}"
 
-rule breaked_nj_perf_compare:
+rule nj_perf_compare:
     input:
-        tree = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
+        tree = "data/simulations/{dist}_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
         ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
     output:
-        eval_file = "data/simulations/results/breaked_nj/n{ncells}_l{loci}_s{seed}_eval.txt"
+        eval_file = "data/simulations/results/{dist}_nj/n{ncells}_l{loci}_s{seed}_eval.txt"
     shell:
         "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -r {input.ground_truth_tree} -i {input.tree} "
         " -d rf qt tt -o {output.eval_file}"

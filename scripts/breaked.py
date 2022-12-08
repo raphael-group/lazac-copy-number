@@ -60,6 +60,12 @@ class ChromosomeCopyNumberProfile:
             self.bins, breakpoint_profile, self.chromosome
         )
 
+    def hamming_distance(self, cnp):
+        return np.sum(self.profile != cnp.profile)
+
+    def rectilinear_distance(self, cnp):
+        return np.sum(np.abs(self.profile - cnp.profile))
+
 @dataclass(frozen=True)
 class CopyNumberProfile:
     """Whole-genome copy number profile"""
@@ -67,6 +73,22 @@ class CopyNumberProfile:
 
     def breakpoints(self, wgd=0) -> BreakpointProfile:
         return BreakpointProfile([p.breakpoints(wgd=wgd) for p in self.profiles])
+
+    def hamming_distance(self, cnp):
+        assert type(cnp) is type(self)
+        assert len(self.profiles) == len(cnp.profiles)
+        distance = 0
+        for cnp1, cnp2 in zip(self.profiles, cnp.profiles):
+            distance += cnp1.hamming_distance(cnp2)
+        return distance
+
+    def rectilinear_distance(self, cnp):
+        assert type(cnp) is type(self)
+        assert len(self.profiles) == len(cnp.profiles)
+        distance = 0
+        for cnp1, cnp2 in zip(self.profiles, cnp.profiles):
+            distance += cnp1.rectilinear_distance(cnp2)
+        return distance
 
 """
 Computes the magnitude (i.e. distance from all 0's profile)
@@ -138,6 +160,11 @@ def parse_arguments():
         "--output", help="Output prefix.", default="breaked"
     )
 
+    parser.add_argument(
+        "--distance", choices=["breaked", "hamming", "rectilinear-break", "rectilinear"],
+        default="breaked"
+    )
+
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -149,7 +176,12 @@ if __name__ == "__main__":
     pairwise_distances = pd.DataFrame(columns=cnp_profiles.index)
     for (n1, p1) in cnp_profiles.items():
         for (n2, p2) in cnp_profiles.items():
-            pairwise_distances.loc[n1, n2] = p1.breakpoints().distance(p2.breakpoints())
+            if args.distance == "breaked":
+                pairwise_distances.loc[n1, n2] = p1.breakpoints().distance(p2.breakpoints())
+            elif args.distance == "hamming":
+                pairwise_distances.loc[n1, n2] = p1.hamming_distance(p2)
+            elif args.distance == "rectilinear":
+                pairwise_distances.loc[n1, n2] = p1.rectilinear_distance(p2)
 
     names = pairwise_distances.columns
     dm = DistanceMatrix(pairwise_distances.to_numpy(), list(map(str, names)))
