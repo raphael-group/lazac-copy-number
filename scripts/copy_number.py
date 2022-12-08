@@ -1,5 +1,23 @@
 from dataclasses import dataclass
 
+import numpy as np
+
+@dataclass(frozen=True)
+class Interval:
+    start: int
+    end: int
+
+    def overlap(self, other_interval):
+        if other_interval.start <= self.end and other_interval.start >= self.start:
+            return Interval(other_interval.start, min(other_interval.end, self.end))
+        elif self.start <= other_interval.end and self.start >= other_interval.start:
+            return Interval(self.start, min(self.end, other_interval.end))
+        else:
+            return None
+
+    def size(self):
+        return (self.end - self.start) + 1
+
 @dataclass(frozen=True)
 class Bin:
     start: int
