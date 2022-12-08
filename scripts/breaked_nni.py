@@ -380,6 +380,29 @@ class ScoringFunction:
 
         return distance
 
+"""
+Removes bins that are constant across all
+breakpoint profiles.
+"""
+def remove_constant_bins(breakpoint_profiles):
+    first_profile = breakpoint_profiles.iloc[0]
+    non_constant_bin_masks = {} # dict from profile_idx -> mask
+    for profile_idx in range(len(first_profile.profiles)):
+        non_constant_bin_masks[profile_idx] = np.zeros(first_profile.profiles[profile_idx].profile.shape[1], dtype=bool)
+        for bin_idx in range(first_profile.profiles[profile_idx].profile.shape[1]):
+            bin_values = set([bp.profiles[profile_idx].profile[0, bin_idx] for bp in breakpoint_profiles])
+            non_constant_bin_masks[profile_idx][bin_idx] = len(bin_values) > 1
+
+    compressed_breakpoint_profiles = {}
+    for (node, bp) in breakpoint_profiles.items():
+        chromosome_profiles = []
+        for (profile_idx, cbp) in enumerate(bp.profiles):
+            new_profile = cbp.profile[:, non_constant_bin_masks[profile_idx]]
+            chromosome_profiles.append(ChromosomeBreakpointProfile(cbp.bins, new_profile, cbp.chromosome))
+        compressed_breakpoint_profiles[node] = BreakpointProfile(chromosome_profiles)
+
+    return pd.Series(compressed_breakpoint_profiles)
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Solves rectilinear steiner tree problem."
@@ -409,6 +432,7 @@ if __name__ == "__main__":
     cnp_profiles = cnp_profiles.groupby("node").apply(process_copy_number_profile_df)
 
     breakpoint_profiles = cnp_profiles.map(lambda x: x.breakpoints())
+    breakpoint_profiles = remove_constant_bins(breakpoint_profiles)
     scoring_function = ScoringFunction(breakpoint_profiles)
 
     candidate_trees = []
@@ -436,7 +460,7 @@ if __name__ == "__main__":
         candidate_tree_optimized = hill_climb(candidate_tree, scoring_function)
         candidate_tree_optimized_parsimony = scoring_function.score(candidate_tree_optimized)
 
-        if len(candidate_trees) < 1:
+        if len(candidate_trees) < 5:
             candidate_trees.append((candidate_tree_optimized, candidate_tree_optimized_parsimony))
             continue
 
