@@ -60,17 +60,17 @@ def arbitrarily_resolve_polytomies(T):
 
 """
  - T: a binary topology on the copy number profiles
- - leaf_bin_f: a function that returns the value of a 
-   breakpoint bin for a leaf in the tree.
+ - leaf_f: a function that returns a chromosome breakpoint 
+   profile for a leaf in the tree.
 """
-def compute_rectilinear_distance_bin(leaf_bin_f, T : nx.DiGraph, labeling, score, start_node='root'):
+def compute_rectilinear_distance_chromosome(leaf_f, T : nx.DiGraph, labeling, score, start_node='root'):
     stack = deque([start_node]) # stack to simulate DFS search
 
     while stack:
         node = stack.pop()
 
         if is_leaf(T, node):
-            labeling[node] = Interval(leaf_bin_f(node), leaf_bin_f(node))
+            labeling[node] = IntervalVector(leaf_f(node), leaf_f(node))
             score[node] = 0
             continue
 
@@ -85,16 +85,12 @@ def compute_rectilinear_distance_bin(leaf_bin_f, T : nx.DiGraph, labeling, score
 
             assert len(child_states) == 2, child_states
 
-            child1_interval = child_states[0]
-            child2_interval = child_states[1]
-            overlap_interval = child1_interval.overlap(child2_interval)
-            if overlap_interval is None:
-                node_interval = Interval(min(child1_interval.end, child2_interval.end),  max(child1_interval.start, child2_interval.start))
-                labeling[node] = node_interval
-                score[node] += node_interval.size()
-            else:
-                labeling[node] = overlap_interval
-            
+            child1_interval_vec = child_states[0]
+            child2_interval_vec = child_states[1]
+
+            node_interval_vec, bad_entry_mask = child1_interval_vec.sankoff(child2_interval_vec)
+            labeling[node] = node_interval_vec
+            score[node] += np.sum(node_interval_vec.end[bad_entry_mask] - node_interval_vec.start[bad_entry_mask])
             continue
 
         # if all children have not been visited, push current node on stack and then
@@ -109,15 +105,13 @@ def compute_rectilinear_distance_bin(leaf_bin_f, T : nx.DiGraph, labeling, score
 def compute_rectilinear_distance(breakpoint_profiles, T : nx.DiGraph):
     first_profile = breakpoint_profiles.iloc[0]
 
-    labelings, scores = {}, {}
+    labelings, scores = defaultdict(dict), defaultdict(dict)
     distance = 0
     for profile_idx in range(len(first_profile.profiles)):
-        labelings[profile_idx] = defaultdict(dict)
-        scores[profile_idx] = defaultdict(dict)
-        for bin_idx in range(first_profile.profiles[profile_idx].profile.shape[1]):
-            bin_labeling = lambda n: breakpoint_profiles[int(n)].profiles[profile_idx].profile[0, bin_idx]
-            compute_rectilinear_distance_bin(bin_labeling, T, labelings[profile_idx][bin_idx], scores[profile_idx][bin_idx])
-            distance += scores[profile_idx][bin_idx]['root']
+        label_f = lambda n: breakpoint_profiles[int(n)].profiles[profile_idx].profile # f : node -> np.array
+        compute_rectilinear_distance_chromosome(label_f, T, labelings[profile_idx], scores[profile_idx])
+        distance += scores[profile_idx]['root']
+
     return distance, labelings, scores
 
 # NOT THREAD SAFE
@@ -144,43 +138,37 @@ def recompute_rectilinear_distance(breakpoint_profiles, T : nx.DiGraph, labeling
     T.add_edge(v, w)
     T.add_edge(u, z) 
 
-    saved_labelings = {}
-    saved_scores = {}
+    saved_labelings = defaultdict(dict)
+    saved_scores = defaultdict(dict)
 
     distance = 0
     for profile_idx in range(len(first_profile.profiles)):
-        saved_scores[profile_idx] = defaultdict(dict)
-        saved_labelings[profile_idx] = defaultdict(dict)
+        label_f = lambda n: breakpoint_profiles[int(n)].profiles[profile_idx].profile
 
-        for bin_idx in range(first_profile.profiles[profile_idx].profile.shape[1]):
-            bin_labeling = lambda n: breakpoint_profiles[int(n)].profiles[profile_idx].profile[0, bin_idx]
+        # save scores
+        for node in path_to_root:
+            saved_scores[profile_idx][node] = scores[profile_idx][node]
+            saved_labelings[profile_idx][node] = labelings[profile_idx][node]
 
-            for node in path_to_root:
-                saved_scores[profile_idx][bin_idx][node] = scores[profile_idx][bin_idx][node]
-                saved_labelings[profile_idx][bin_idx][node] = labelings[profile_idx][bin_idx][node]
+        # update labeling and parsimony scores by walking
+        # up path to root
+        for node in path_to_root:
+            scores[profile_idx][node] = 0
+            child_states = []
+            for child in T[node]:
+                child_states.append(labelings[profile_idx][child])
+                scores[profile_idx][node] += scores[profile_idx][child]
 
-            # update labeling and parsimony scores by walking
-            # up path to root
-            for node in path_to_root:
-                scores[profile_idx][bin_idx][node] = 0
-                child_states = []
-                for child in T[node]:
-                    child_states.append(labelings[profile_idx][bin_idx][child])
-                    scores[profile_idx][bin_idx][node] += scores[profile_idx][bin_idx][child]
+            assert len(child_states) == 2, child_states
 
-                assert len(child_states) == 2, child_states
+            child1_interval_vec = child_states[0]
+            child2_interval_vec = child_states[1]
 
-                child1_interval = child_states[0]
-                child2_interval = child_states[1]
-                overlap_interval = child1_interval.overlap(child2_interval)
-                if overlap_interval is None:
-                    node_interval = Interval(min(child1_interval.end, child2_interval.end), max(child1_interval.start, child2_interval.start))
-                    labelings[profile_idx][bin_idx][node] = node_interval
-                    scores[profile_idx][bin_idx][node] += node_interval.size()
-                else:
-                    labelings[profile_idx][bin_idx][node] = overlap_interval
+            node_interval_vec, bad_entry_mask = child1_interval_vec.sankoff(child2_interval_vec)
+            labelings[profile_idx][node] = node_interval_vec
+            scores[profile_idx][node] += np.sum(node_interval_vec.end[bad_entry_mask] - node_interval_vec.start[bad_entry_mask])
 
-            distance += scores[profile_idx][bin_idx]['root']
+        distance += scores[profile_idx]['root']
 
     # return T to original state
     T.add_edge(u, w) 
@@ -190,10 +178,9 @@ def recompute_rectilinear_distance(breakpoint_profiles, T : nx.DiGraph, labeling
 
     # return scores
     for profile_idx in range(len(first_profile.profiles)):
-        for bin_idx in range(first_profile.profiles[profile_idx].profile.shape[1]):
-            for node in path_to_root:
-                scores[profile_idx][bin_idx][node] = saved_scores[profile_idx][bin_idx][node]
-                labelings[profile_idx][bin_idx][node] = saved_labelings[profile_idx][bin_idx][node]
+        for node in path_to_root:
+            scores[profile_idx][node] = saved_scores[profile_idx][node]
+            labelings[profile_idx][node] = saved_labelings[profile_idx][node]
 
     return distance
 
@@ -436,7 +423,7 @@ if __name__ == "__main__":
     scoring_function = ScoringFunction(breakpoint_profiles)
 
     candidate_trees = []
-    for aggression in [0, 1]:
+    for aggression in [0, 0.5]:
         candidate_tree = seed_tree.copy() 
         if aggression != 0:
             candidate_tree = stochastic_nni(candidate_tree, aggression=aggression)

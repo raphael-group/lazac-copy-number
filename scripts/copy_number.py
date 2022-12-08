@@ -3,6 +3,29 @@ from dataclasses import dataclass
 import numpy as np
 
 @dataclass(frozen=True)
+class IntervalVector:
+    start: np.ndarray
+    end: np.ndarray
+
+    def sankoff(self, other_interval):
+        start_vec, end_vec = np.full_like(self.start, -1, dtype=np.byte), np.full_like(self.end, -1, dtype=np.byte)
+
+        cond1 = (other_interval.start <= self.end) & (other_interval.start >= self.start)
+        cond2 = (self.start <= other_interval.end) & (self.start >= other_interval.start)
+
+        start_vec[cond1] = other_interval.start[cond1]
+        end_vec[cond1] = np.minimum(self.end[cond1], other_interval.end[cond1])
+
+        start_vec[cond2] = self.start[cond2]
+        end_vec[cond2] = np.minimum(self.end[cond2], other_interval.end[cond2])
+
+        bad_entry_mask = ~(cond1 | cond2)
+        start_vec[bad_entry_mask] = np.minimum(self.end[bad_entry_mask], other_interval.end[bad_entry_mask])
+        end_vec[bad_entry_mask] = np.maximum(self.start[bad_entry_mask], other_interval.start[bad_entry_mask])
+        
+        return IntervalVector(start_vec, end_vec), bad_entry_mask
+
+@dataclass(frozen=True)
 class Interval:
     start: int
     end: int
