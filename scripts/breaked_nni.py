@@ -225,7 +225,7 @@ def from_newick_get_nx_tree(tree_path):
 """
 Stochastically pertubs T using NNI operations.
 """
-def stochastic_nni(T, aggression=0.30):
+def stochastic_nni(T, aggression=0.50):
     T = T.copy()
 
     internal_edges = [(u, v) for (u, v) in T.edges if not is_leaf(T, v)]
@@ -423,7 +423,7 @@ if __name__ == "__main__":
     scoring_function = ScoringFunction(breakpoint_profiles)
 
     candidate_trees = []
-    for aggression in [0, 0.5]:
+    for aggression in [0, 1.3, 0.2, 0.5, 0.7]:
         candidate_tree = seed_tree.copy() 
         if aggression != 0:
             candidate_tree = stochastic_nni(candidate_tree, aggression=aggression)
@@ -434,7 +434,7 @@ if __name__ == "__main__":
     candidate_trees = sorted(candidate_trees, key=lambda x: x[1])[:5]
 
     count = 0
-    while count < 100:
+    while count < 250:
         candidate_trees = sorted(candidate_trees, key=lambda x: x[1])
 
         for (i, (T, _)) in enumerate(candidate_trees):
@@ -466,3 +466,8 @@ if __name__ == "__main__":
         newick_tree = tree_to_newick(candidate_trees[0][0])
         with open(args.output, 'w') as f:
             f.write(f"{newick_tree};")
+
+    candidate_trees = sorted(candidate_trees, key=lambda x: x[1])
+    newick_tree = tree_to_newick(candidate_trees[0][0])
+    with open(args.output, 'w') as f:
+        f.write(f"{newick_tree};")
