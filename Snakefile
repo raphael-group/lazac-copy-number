@@ -1,10 +1,19 @@
-ncells = [20, 40, 80]
-nloci  = [400, 800, 1200]
-seeds  = [0, 1, 2, 3]
+#
+ncells = [20]
+nloci  = [400]
+seeds  = [0]
+#ncells = [20, 40, 80]
+#nloci  = [400, 800, 1200]
+#seeds  = [0, 1, 2, 3]
 
 simulation_instances = expand(
     "data/simulations/ground_truth/n{cells}_l{loci}_s{seed}_tree.newick", 
     cells=ncells, loci=nloci, seed=seeds
+)
+
+simSCS_sim_instances = expand(
+    "data/simulations/simSCS/n{ncells}_s{seed}_tree.newick",
+    ncells=ncells, seed=seeds
 )
 
 breaked_distances = ["breaked", "hamming", "rectilinear"]
@@ -23,11 +32,29 @@ breaked_nni_instances = expand(
     cells=ncells, loci=nloci, seed=seeds
 )
 
+simSCS_main = '/n/fs/ragr-data/users/palash/SimSCSnTree/main.par.overlapping.py'
+simSCS_cn = '/n/fs/ragr-data/users/palash/SimSCSnTree/read_tree.py'
+simSCS_tree = '/n/fs/ragr-data/users/palash/SimSCSnTree/gen_newick.py'
+ref_file = '/n/fs/ragr-data/users/palash/SimSCSnTree/hg19.fa'
+
 rule all:
     input:
-        breaked_nni_instances,
-        breaked_nj_instances,
-        medicc2_instances
+        simSCS_sim_instances,
+        #breaked_nni_instances,
+        #breaked_nj_instances,
+        #medicc2_instances
+
+rule simSCS:
+    output:
+        cn_profiles = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.bed',
+        tree = 'data/simulations/simSCS/n{ncells}_s{seed}_tree.newick',
+    params:
+        out_dir = 'data/simulations/simSCS/n{ncells}_s{seed}',
+        npy_file = 'data/simulations/simSCS/n{ncells}_s{seed}/from_first_step.tree.npy',
+    shell:
+        'python {simSCS_main} -W 0 -R 0 -r {params.out_dir} -t {ref_file} --seed {wildcards.seed} -n {wildcards.ncells} ;'
+        'python {simSCS_cn} -s -f {params.npy_file} > {output.cn_profiles};'
+        'python {simSCS_tree} {params.npy_file} > {output.tree};'
 
 rule conet_simulation:
     output:
