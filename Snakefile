@@ -11,8 +11,14 @@ simulation_instances = expand(
     cells=ncells, loci=nloci, seed=seeds
 )
 
+
 simSCS_sim_instances = expand(
     "data/simulations/simSCS/n{ncells}_s{seed}_tree.newick",
+    ncells=ncells, seed=seeds
+)
+
+simSCS_sim_postprocess = expand(
+    "data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.csv",
     ncells=ncells, seed=seeds
 )
 
@@ -40,6 +46,7 @@ ref_file = '/n/fs/ragr-data/users/palash/SimSCSnTree/hg19.fa'
 rule all:
     input:
         simSCS_sim_instances,
+        simSCS_sim_postprocess,
         #breaked_nni_instances,
         #breaked_nj_instances,
         #medicc2_instances
@@ -55,6 +62,15 @@ rule simSCS:
         'python {simSCS_main} -W 0 -R 0 -r {params.out_dir} -t {ref_file} --seed {wildcards.seed} -n {wildcards.ncells} ;'
         'python {simSCS_cn} -s -f {params.npy_file} > {output.cn_profiles};'
         'python {simSCS_tree} {params.npy_file} > {output.tree};'
+
+rule simSCS_pp:
+    output:
+        cn_csv = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.csv',
+    input:
+        cn_profiles = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.bed',
+    shell:
+        'python scripts/post_process_simSCS.py -i {input.cn_profiles} -o {output.cn_csv}'
+
 
 rule conet_simulation:
     output:
