@@ -10,53 +10,6 @@ import heapq
 import pandas as pd
 import numpy as np
 
-#"""
-#Computes the magnitude (i.e. distance from all 0's profile)
-#of a single allele breakpoint profile.
-#"""
-#def breakpoint_magnitude(profile : np.ndarray) -> int:
-#    positive_entries = list(-1 * profile[profile > 0]) # make positive entries negative to use min-heap
-#    negative_entries = list(profile[profile < 0])
-#
-#    heapq.heapify(positive_entries) # invariant: all entries positive
-#    heapq.heapify(negative_entries) # invariant: all entries negative
-#
-#    distance = 0
-#    while len(positive_entries) > 1:
-#        t1 = heapq.heappop(positive_entries) # t1 < t2 (i.e -5 < -4)
-#        t2 = heapq.heappop(positive_entries)
-#
-#        t1 = t1 + 1
-#        t2 = t2 + 1
-#        distance += 1
-#
-#        if t1 != 0:
-#            heapq.heappush(positive_entries, t1)
-#        if t2 != 0:
-#            heapq.heappush(positive_entries, t2)
-#
-#    if len(positive_entries) == 1:
-#        distance += np.abs(positive_entries[0])
-#
-#    while len(negative_entries) > 1:
-#        t1 = heapq.heappop(negative_entries) # t1 < t2 (i.e -5 < -4)
-#        t2 = heapq.heappop(negative_entries)
-#
-#        t1 = t1 + 1
-#        t2 = t2 + 1
-#
-#        distance += 1
-#
-#        if t1 != 0:
-#            heapq.heappush(negative_entries, t1)
-#        if t2 != 0:
-#            heapq.heappush(negative_entries, t2)
-#
-#    if len(negative_entries) == 1:
-#        distance += np.abs(negative_entries[0])
-#    
-#    return distance
-
 def process_copy_number_profile_df(df : pd.DataFrame) -> CopyNumberProfile:
     df = df.sort_values(by=["chrom", "start", "end"])
 

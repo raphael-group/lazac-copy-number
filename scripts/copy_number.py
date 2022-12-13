@@ -6,6 +6,8 @@ import heapq
 """
 Computes the magnitude (i.e. distance from all 0's profile)
 of a single allele breakpoint profile.
+
+Pseudo-linear time algorithm.
 """
 def breakpoint_magnitude(profile : np.ndarray) -> int:
     positive_entries = list(-1 * profile[profile > 0]) # make positive entries negative to use min-heap
@@ -49,7 +51,6 @@ def breakpoint_magnitude(profile : np.ndarray) -> int:
         distance += np.abs(negative_entries[0])
     
     return distance
-
 
 @dataclass(frozen=True)
 class IntervalVector:

@@ -38,14 +38,18 @@ def main(args):
                 else:
                     raise Exception(f"multiple entries for chrom {chrom}, cell {cell}, breakpoint idx {idx}, breakpoint {breakpoint} in input")
     
-    df_breakpoint = pd.DataFrame(breakpoint_data, columns = ['cell_id', 'chrom', 'start', 'end', 'cn_a'])
+    df_breakpoint = pd.DataFrame(breakpoint_data, columns = ['node', 'chrom', 'start', 'end', 'cn_a'])
     
-    df_breakpoint.to_csv(args.o, index=False)
+    df_breakpoint.to_csv(f"{args.o}_cn_profiles.csv", index=False)
+
+    df_breakpoint = pd.DataFrame(breakpoint_data, columns = ['sample_id', 'chrom', 'start', 'end', 'cn_a'])
+    df_breakpoint['sample_id'] = 'sample_' + df_breakpoint['sample_id'].astype(str)
+    df_breakpoint.to_csv(f"{args.o}_cn_profiles_medicc2.tsv", index=False, sep="\t")
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', type=str, help='input bed file name', required=True)
-    parser.add_argument('-o', type=str, help='output csv file name', required=True)
+    parser.add_argument('-o', type=str, help='output prefix', required=True)
     
     args = parser.parse_args(None if sys.argv[1:] else ['-h'])
     
