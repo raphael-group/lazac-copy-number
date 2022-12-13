@@ -42,17 +42,29 @@ rule all:
         medicc2_instances
         # breaked_nni_instances,
 
-rule simSCS:
+rule simSCS_gen_topology:
     output:
-        cn_profiles = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.bed',
-        tree = 'data/simulations/simSCS/n{ncells}_s{seed}_tree.newick',
+        npy_file = 'data/simulations/simSCS/n{ncells}_s{seed}/from_first_step.tree.npy',
     params:
         out_dir = 'data/simulations/simSCS/n{ncells}_s{seed}',
-        npy_file = 'data/simulations/simSCS/n{ncells}_s{seed}/from_first_step.tree.npy',
     shell:
         'python {simSCS_main} -m 250000 -G 6 -M 1 -W 0 -R 0 -r {params.out_dir} -t {ref_file} --seed {wildcards.seed} -F {wildcards.ncells};'
-        'python {simSCS_cn} -s -f {params.npy_file} > {output.cn_profiles};'
-        'python {simSCS_tree} {params.npy_file} > {output.tree};'
+
+rule simSCS_gen_copy_number:
+    input:
+        npy_file = 'data/simulations/simSCS/n{ncells}_s{seed}/from_first_step.tree.npy',
+    output:
+        cn_profiles = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.bed',
+    shell:
+        'python {simSCS_cn} -s -f {input.npy_file} > {output.cn_profiles};'
+
+rule simSCS_write_newick:
+    input:
+        npy_file = 'data/simulations/simSCS/n{ncells}_s{seed}/from_first_step.tree.npy',
+    output:
+        tree = 'data/simulations/simSCS/n{ncells}_s{seed}_tree.newick',
+    shell:
+        'python {simSCS_tree} {input.npy_file} > {output.tree};'
 
 rule simSCS_post_process:
     output:
@@ -61,7 +73,7 @@ rule simSCS_post_process:
     input:
         cn_profiles = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.bed',
     shell:
-        'python scripts/post_process_simSCS.py -i {input.cn_profiles} -o data/simulations/simSCS/n{ncells}_s{seed}'
+        'python scripts/post_process_simSCS.py -i {input.cn_profiles} -o data/simulations/simSCS/n{wildcards.ncells}_s{wildcards.seed}'
 
 rule nj:
     input:
@@ -73,7 +85,7 @@ rule nj:
         "data/simulations/{dist}_nj/n{ncells}_s{seed}.benchmark.txt"
     shell:
         "python scripts/breaked.py {input.cn_profiles} --distance {wildcards.dist} --output "
-        "data/simulations/{wildcards.dist}_nj/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
+        "data/simulations/{wildcards.dist}_nj/n{wildcards.ncells}_s{wildcards.seed}"
 
 rule breaked_nni:
     input:
@@ -96,7 +108,7 @@ rule medicc2:
         "data/simulations/medicc2/n{ncells}_s{seed}.benchmark.txt"
     shell:
         "/n/fs/ragr-data/users/schmidt/miniconda3/envs/medicc2/bin/medicc2 "
-        "-p n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed} -a 'cn_a' --input-type tsv --total-copy-numbers "
+        "-p n{wildcards.ncells}_s{wildcards.seed} -a 'cn_a' --input-type tsv --total-copy-numbers "
         "{input.medicc2_cn_profiles} data/simulations/medicc2/"
 
 # removes sample_ from these which 
