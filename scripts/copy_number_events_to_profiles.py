@@ -48,7 +48,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--bin_size", help="Bin size for copy number profile",
-        type=int, default=200_000
+        type=int, default=100_000
     )
 
     parser.add_argument(
