@@ -11,6 +11,16 @@ simSCS_sim_postprocess = expand(
     ncells=ncells, seed=seeds
 )
 
+simSCS_sim_dists = expand(
+    "data/simulations/simSCS/n{ncells}_s{seed}_dist_matrix.tsv",
+    ncells=ncells, seed=seeds
+)
+
+simSCS_sim_leaves = expand(
+    "data/simulations/simSCS/n{ncells}_s{seed}_leaf_index.txt",
+    ncells=ncells, seed=seeds
+)
+
 breaked_distances = ["breaked", "hamming", "rectilinear"]
 breaked_nj_instances = expand(
     "data/simulations/results/{dist}_nj/n{cells}_s{seed}_eval.txt", 
@@ -39,6 +49,8 @@ rule all:
     input:
         simSCS_sim_instances,
         simSCS_sim_postprocess,
+        simSCS_sim_dists,
+        simSCS_sim_leaves,
         breaked_nj_instances,
         # medicc2_instances
         # breaked_nni_instances,
@@ -49,7 +61,23 @@ rule simSCS_gen_topology:
     params:
         out_dir = 'data/simulations/simSCS/n{ncells}_s{seed}',
     shell:
-        'python {simSCS_main} -G 6 -m 2000000 -M 1 -W 0 -R 0 -r {params.out_dir} -t {ref_file} --seed {wildcards.seed} -F {wildcards.ncells};'
+        'python {simSCS_main} -G 6 -m 2000000 -M 1 -R 0 -r {params.out_dir} -t {ref_file} --seed {wildcards.seed} -F {wildcards.ncells};'
+
+rule simSCS_gen_leaves:
+    input:
+        npy_file = 'data/simulations/simSCS/n{ncells}_s{seed}/from_first_step.tree.npy',
+    output:
+        leaf_index = 'data/simulations/simSCS/n{ncells}_s{seed}_leaf_index.txt',
+    shell:
+        'python {simSCS_cn} --leaf -f {input.npy_file} > {output.leaf_index};'
+
+rule simSCS_gen_tree_distance:
+    input:
+        npy_file = 'data/simulations/simSCS/n{ncells}_s{seed}/from_first_step.tree.npy',
+    output:
+        dist_matrix = 'data/simulations/simSCS/n{ncells}_s{seed}_dist_matrix.tsv',
+    shell:
+        'python {simSCS_cn} --pairdist -f {input.npy_file} > {output.dist_matrix};'
 
 rule simSCS_gen_copy_number:
     input:
@@ -72,9 +100,11 @@ rule simSCS_post_process:
         cn_csv = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.csv',
         cn_tsv = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles_medicc2.tsv',
     input:
+        leaf_index = 'data/simulations/simSCS/n{ncells}_s{seed}_leaf_index.txt',
         cn_profiles = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.bed',
     shell:
-        'python scripts/copy_number_events_to_profiles.py {input.cn_profiles} {ref_chrom_sizes} -o data/simulations/simSCS/n{wildcards.ncells}_s{wildcards.seed}'
+        'python scripts/copy_number_events_to_profiles.py {input.cn_profiles} {ref_chrom_sizes} --leaf-index {input.leaf_index} '
+        '-o data/simulations/simSCS/n{wildcards.ncells}_s{wildcards.seed}'
 
 rule nj:
     input:
@@ -153,3 +183,4 @@ rule medicc2_perf_compare:
     shell:
         "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
         " -d rf qt tt -o {output.eval_file}"
+

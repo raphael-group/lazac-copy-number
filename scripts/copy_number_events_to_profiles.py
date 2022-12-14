@@ -43,6 +43,10 @@ def parse_arguments():
     )
 
     parser.add_argument(
+        "--leaf-index", help="Leaf index file, will exclude non-leaves."
+    )
+
+    parser.add_argument(
         "--bin_size", help="Bin size for copy number profile",
         type=int, default=200_000
     )
@@ -60,6 +64,11 @@ if __name__ == "__main__":
     cn_events = cn_events.sort_values('chrom')
     cell_chromosome_to_cn_itree = convert_events_to_interval_trees(cn_events)
     
+    leaves = None
+    if args.leaf_index:
+        with open(args.leaf_index, 'r') as f:
+            leaves = set(map(lambda l: l.strip(), f.readlines()))
+
     cell_ids = cn_events.cell_id.unique()
     dfs = []
     chromosome_lengths = pd.read_csv(args.chromosome_lengths)
@@ -70,6 +79,9 @@ if __name__ == "__main__":
         chrom_bin_ends = np.concatenate([chrom_bin_starts[1:], np.array([chromosome_length])])
         chrom_bins = np.array([chrom_bin_starts, chrom_bin_ends])
         for cell_id in cell_ids:
+            if leaves is not None and str(cell_id) not in leaves:
+                continue
+
             itree = it.IntervalTree()
             if (cell_id, row['chromosome']) in cell_chromosome_to_cn_itree:
                 itree = cell_chromosome_to_cn_itree[cell_id, row['chromosome']]
