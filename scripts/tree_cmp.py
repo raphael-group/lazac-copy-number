@@ -23,8 +23,6 @@ if __name__ == "__main__":
 
    t1 = Tree(args.tree1, format=1)
    t2 = Tree(args.tree2, format=1)
-   print(t1.is_root())
-   print(t2.is_root())
-   print(t1)
-   print(t2)
-   print(t2.robinson_foulds(t1, unrooted_trees=True))
+   rf = t2.robinson_foulds(t1, unrooted_trees=True)
+   print(rf[0])
+   print(rf[1])

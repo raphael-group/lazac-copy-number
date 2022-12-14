@@ -50,7 +50,7 @@ if __name__ == "__main__":
     for (n1, p1) in cnp_profiles.items():
         for (n2, p2) in cnp_profiles.items():
             if args.distance == "breaked":
-                pairwise_distances.loc[n1, n2] = p1.breakpoints().distance(p2.breakpoints())
+                pairwise_distances.loc[n1, n2] = p1.breakpoints().distance(p2.breakpoints()) * 2
             elif args.distance == "hamming":
                 pairwise_distances.loc[n1, n2] = p1.hamming_distance(p2)
             elif args.distance == "rectilinear":

@@ -12,6 +12,8 @@ Pseudo-linear time algorithm.
 def breakpoint_magnitude(profile : np.ndarray) -> int:
     positive_entries = list(-1 * profile[profile > 0]) # make positive entries negative to use min-heap
     negative_entries = list(profile[profile < 0])
+    print(len(positive_entries))
+    print(len(negative_entries))
 
     heapq.heapify(positive_entries) # invariant: all entries positive
     heapq.heapify(negative_entries) # invariant: all entries negative

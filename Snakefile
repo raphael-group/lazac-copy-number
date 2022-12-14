@@ -1,5 +1,5 @@
-ncells = [75, 100, 125]
-seeds  = [0, 1, 2, 3, 4, 5, 6, 7]
+ncells = [20] #, 75, 100, 125]
+seeds  = [1] #, 1, 2, 3]
 
 simSCS_sim_instances = expand(
     "data/simulations/simSCS/n{ncells}_s{seed}_tree.newick",
@@ -31,6 +31,7 @@ simSCS_main = '/n/fs/ragr-data/users/palash/SimSCSnTree/main.par.overlapping.py'
 simSCS_cn = '/n/fs/ragr-data/users/palash/SimSCSnTree/read_tree.py'
 simSCS_tree = '/n/fs/ragr-data/users/palash/SimSCSnTree/gen_newick.py'
 ref_file = '/n/fs/ragr-data/users/palash/SimSCSnTree/hg19.fa'
+ref_chrom_sizes = 'data/genomes/hg38_chromosome_sizes.csv' 
 
 simSCS_python = '/n/fs/ragr-data/users/schmidt/miniconda3/envs/breaked/bin/python3.9'
 
@@ -39,7 +40,7 @@ rule all:
         simSCS_sim_instances,
         simSCS_sim_postprocess,
         breaked_nj_instances,
-        medicc2_instances
+        # medicc2_instances
         # breaked_nni_instances,
 
 rule simSCS_gen_topology:
@@ -48,7 +49,7 @@ rule simSCS_gen_topology:
     params:
         out_dir = 'data/simulations/simSCS/n{ncells}_s{seed}',
     shell:
-        'python {simSCS_main} -m 250000 -G 6 -M 1 -W 0 -R 0 -r {params.out_dir} -t {ref_file} --seed {wildcards.seed} -F {wildcards.ncells};'
+        'python {simSCS_main} -G 6 -m 2000000 -M 1 -W 0 -R 0 -r {params.out_dir} -t {ref_file} --seed {wildcards.seed} -F {wildcards.ncells};'
 
 rule simSCS_gen_copy_number:
     input:
@@ -73,7 +74,7 @@ rule simSCS_post_process:
     input:
         cn_profiles = 'data/simulations/simSCS/n{ncells}_s{seed}_cn_profiles.bed',
     shell:
-        'python scripts/post_process_simSCS.py -i {input.cn_profiles} -o data/simulations/simSCS/n{wildcards.ncells}_s{wildcards.seed}'
+        'python scripts/copy_number_events_to_profiles.py {input.cn_profiles} {ref_chrom_sizes} -o data/simulations/simSCS/n{wildcards.ncells}_s{wildcards.seed}'
 
 rule nj:
     input:
@@ -130,7 +131,7 @@ rule nj_perf_compare:
     output:
         eval_file = "data/simulations/results/{dist}_nj/n{ncells}_s{seed}_eval.txt"
     shell:
-        "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -r {input.ground_truth_tree} -i {input.tree} "
+        "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
         " -d rf qt tt -o {output.eval_file}"
 
 rule breaked_nni_perf_compare:
