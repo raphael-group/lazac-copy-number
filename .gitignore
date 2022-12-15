@@ -6,6 +6,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# slurm/snakemake
+slurm*
+snakemake/
+
 # C extensions
 *.so
 

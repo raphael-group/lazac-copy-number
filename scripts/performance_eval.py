@@ -35,6 +35,10 @@ def parse_simulation_parameters(filename):
 
     return params
 
+def read_benchmark_file(benchmark_file):
+    with open(benchmark_file, "r") as b:
+        return dict(zip(next(b).split(), next(b).split()))
+    
 def parse_args():
     p = argparse.ArgumentParser()
 
@@ -56,16 +60,19 @@ if __name__ == "__main__":
     rows = []
     for result_dir in args.result_dirs:
         for eval_file in tqdm(glob.glob(f"{result_dir}/*_eval.txt")):
+            name = os.path.basename(eval_file)[:-len("_eval.txt")]
             params = parse_simulation_parameters(eval_file)
             dists = read_tree_distances(eval_file)
+
+            benchmark_file = f'data/simulations/{params["algorithm"]}/{name}.benchmark.txt'
+            benchmark = read_benchmark_file(benchmark_file)
+
             dists = {
                 "rf_score": dists["RF(0.5)_toYuleAvg"],
                 "quartet_score": dists["Quartet_toYuleAvg"]
             }
 
-            row = params | dists
+            row = params | dists | benchmark
             rows.append(row)
 
     pd.DataFrame(rows).to_csv(args.output)
-
-
