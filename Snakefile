@@ -15,19 +15,19 @@ breaked_nj_instances = expand(
 
 medicc2_instances = expand(
     "data/simulations/results/medicc2/n{cells}_l{loci}_s{seed}_eval.txt",
-    cells=ncells, loci=nloci, seed=seeds
+    cells=[100, 150], loci=nloci, seed=seeds
 )
 
 breaked_nni_instances = expand(
     "data/simulations/results/breaked_nni/n{cells}_l{loci}_s{seed}_eval.txt",
-    cells=ncells, loci=nloci, seed=seeds
+    cells=[100, 150], loci=nloci, seed=seeds
 )
 
 rule all:
     input:
         breaked_nj_instances,
         medicc2_instances,
-        # breaked_nni_instances,
+        breaked_nni_instances,
 
 rule conet_simulation:
     output:

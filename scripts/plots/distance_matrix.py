@@ -22,11 +22,17 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
 
-    m1 = pd.read_csv(args.distance_matrix_1, index_col=0)
+    m1 = pd.read_csv(args.distance_matrix_1, index_col=0, sep='\t')
+    m1 = m1.drop(columns=["diploid"], index=["diploid"])
     m2 = pd.read_csv(args.distance_matrix_2, index_col=0)
+
+    print(m1)
+    print(m2)
+
     results = pd.concat([m1,m2]).stack()\
                                 .groupby(level=[0,1])\
                                 .apply(tuple).unstack()
+    # print(results)
 
     results = [r for r in results.to_numpy().flatten() if r != (0, 0)]
     xs, ys = zip(*results)
