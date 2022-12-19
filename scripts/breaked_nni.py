@@ -108,7 +108,9 @@ def compute_rectilinear_distance(breakpoint_profiles, T : nx.DiGraph):
     labelings, scores = defaultdict(dict), defaultdict(dict)
     distance = 0
     for profile_idx in range(len(first_profile.profiles)):
-        label_f = lambda n: breakpoint_profiles[int(n)].profiles[profile_idx].profile # f : node -> np.array
+        def label_f(node): # label_f : node -> np.array
+            return breakpoint_profiles[node].profiles[profile_idx].profile 
+
         compute_rectilinear_distance_chromosome(label_f, T, labelings[profile_idx], scores[profile_idx])
         distance += scores[profile_idx]['root']
 
@@ -143,7 +145,7 @@ def recompute_rectilinear_distance(breakpoint_profiles, T : nx.DiGraph, labeling
 
     distance = 0
     for profile_idx in range(len(first_profile.profiles)):
-        label_f = lambda n: breakpoint_profiles[int(n)].profiles[profile_idx].profile
+        label_f = lambda n: breakpoint_profiles[n].profiles[profile_idx].profile
 
         # save scores
         for node in path_to_root:
@@ -213,7 +215,7 @@ def from_newick_get_nx_tree(tree_path):
             node_renaming_mapping[node] = f'clade_{idx}'
             idx = idx + 1
         else:
-            node_renaming_mapping[node] = str(node)
+            node_renaming_mapping[node] = node.name
     node_renaming_mapping[list(net_tree.nodes)[0]] = 'root'
     
     net_tree = nx.relabel_nodes(net_tree, node_renaming_mapping)
@@ -313,7 +315,7 @@ def hill_climb_on_edges(scoring_function, current_tree, edge_set):
 
     return current_tree, nni_best_score
 
-def hill_climb(T, scoring_function, threads=8):
+def hill_climb(T, scoring_function, threads=16):
     overall_best_tree = T
     processor_pool = mp.Pool(threads)
     
@@ -404,6 +406,14 @@ def parse_arguments():
     )
 
     parser.add_argument(
+        "--chromosomes", default=["cn_a"], nargs='+'
+    )
+
+    parser.add_argument(
+        "--profile-format", choices=["csv", "tsv"], default="csv"
+    )
+
+    parser.add_argument(
         "--output", help="Output tree", default="inferred_tree.newick"
     )
 
@@ -415,8 +425,14 @@ if __name__ == "__main__":
     seed_tree = from_newick_get_nx_tree(args.seed_tree)
     seed_tree = arbitrarily_resolve_polytomies(seed_tree)
 
-    cnp_profiles = pd.read_csv(args.cnp_profile, sep=",")
-    cnp_profiles = cnp_profiles.groupby("node").apply(process_copy_number_profile_df)
+    if args.profile_format == "csv":
+        cnp_profiles = pd.read_csv(args.cnp_profile, sep=",")
+    elif args.profile_format == "tsv":
+        cnp_profiles = pd.read_csv(args.cnp_profile, sep="\t")
+
+    cnp_profiles = cnp_profiles.groupby("node").apply(
+        lambda df: process_copy_number_profile_df(args.chromosomes, df)
+    )
 
     breakpoint_profiles = cnp_profiles.map(lambda x: x.breakpoints())
     breakpoint_profiles = remove_constant_bins(breakpoint_profiles)

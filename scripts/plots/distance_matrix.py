@@ -33,7 +33,8 @@ if __name__ == "__main__":
     for column in m2.columns:
         for (idx, row) in m2.iterrows():
             v1 = row[column]
-            v2 = m1.loc[f"sample_{column}", f"sample_{idx}"]
+            v2 = m1.loc[f"{column}", f"{idx}"]
+            # v2 = m1.loc[f"sample_{column}", f"sample_{idx}"]
             results.append((v1, v2))
 
     xs, ys = zip(*results)

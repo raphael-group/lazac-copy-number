@@ -13,6 +13,11 @@ breaked_nj_instances = expand(
     cells=ncells, loci=nloci, seed=seeds, dist=breaked_distances
 )
 
+breaked_nj_instances_gundem = expand(
+    "data/gundem_et_al_2015/breaked_nj/PTX{patient}_tree.newick", 
+    patient=["004", "005", "006", "007", "008", "009", "010", "011", "012", "013"]
+)
+
 medicc2_instances = expand(
     "data/simulations/results/medicc2/n{cells}_l{loci}_s{seed}_eval.txt",
     cells=[100, 150], loci=nloci, seed=seeds
@@ -25,9 +30,21 @@ breaked_nni_instances = expand(
 
 rule all:
     input:
-        breaked_nj_instances,
-        medicc2_instances,
-        breaked_nni_instances,
+        breaked_nj_instances_gundem
+        # breaked_nj_instances,
+        # medicc2_instances,
+        # breaked_nni_instances,
+
+rule breaked_nj_gundem:
+    input:
+        cn_profile="data/gundem_et_al_2015/ground_truth/PTX{patient}_input_df.tsv"
+    output:
+        tree = "data/gundem_et_al_2015/{distance}_nj/PTX{patient}_tree.newick",
+        pairwise_distances = "data/gundem_et_al_2015/{distance}_nj/PTX{patient}_pairwise_distances.csv"
+    shell:
+        "python scripts/breaked.py {input.cn_profile} --profile-format tsv --chromosomes cn_a cn_b "
+        "--distance {wildcards.distance} --normal 1 "
+        "--output data/gundem_et_al_2015/{wildcards.distance}_nj/PTX{wildcards.patient}"
 
 rule conet_simulation:
     output:

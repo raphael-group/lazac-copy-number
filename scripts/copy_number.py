@@ -135,8 +135,8 @@ class ChromosomeCopyNumberProfile:
     profile : np.ndarray
     chromosome: str
 
-    def breakpoints(self, wgd=0) -> ChromosomeBreakpointProfile:
-        synthetic_gene = [[2 + wgd]]
+    def breakpoints(self, normal=2) -> ChromosomeBreakpointProfile:
+        synthetic_gene = np.ones((self.profile.shape[0], 1)) * normal
         breakpoint_profile = np.hstack((synthetic_gene, self.profile))
         breakpoint_profile = self.profile - breakpoint_profile[:, :-1] 
         return ChromosomeBreakpointProfile(
@@ -154,8 +154,8 @@ class CopyNumberProfile:
     """Whole-genome copy number profile"""
     profiles : list[ChromosomeCopyNumberProfile]
 
-    def breakpoints(self, wgd=0) -> BreakpointProfile:
-        return BreakpointProfile([p.breakpoints(wgd=wgd) for p in self.profiles])
+    def breakpoints(self, normal=2) -> BreakpointProfile:
+        return BreakpointProfile([p.breakpoints(normal=normal) for p in self.profiles])
 
     def hamming_distance(self, cnp):
         assert type(cnp) is type(self)
