@@ -27,6 +27,7 @@ if __name__ == "__main__":
     axes[0].set_ylabel("Quartet Distance")
     axes[0].set_xlabel("# Cells")
 
+    axes[1].set_yticks([])
     axes[1].set_ylabel(None)
     axes[1].set_xlabel("# Loci")
     axes[1].get_legend().remove()
@@ -42,10 +43,26 @@ if __name__ == "__main__":
     axes[0].set_ylabel("RF Distance")
     axes[0].set_xlabel("# Cells")
 
+    axes[1].set_yticks([])
     axes[1].set_ylabel(None)
     axes[1].set_xlabel("# Loci")
     axes[1].get_legend().remove()
 
     fig.tight_layout()
     fig.savefig("rf.pdf")
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=(4, 4.5))
+    timing_results_df = results[results['algorithm'].isin(['breaked_nj', 'medicc2'])].copy()
+    timing_results_df = timing_results_df[
+        (timing_results_df['nloci'] == 4000) & (timing_results_df['ncells'] <= 150)
+    ]
+    timing_results_df['log(s)'] = np.log10(timing_results_df['s'])
+    sns.boxplot(data=timing_results_df, x='ncells', y='log(s)', hue='algorithm', ax=ax )
+    ax.set_ylabel("log10(time) (s)")
+    ax.set_xlabel("# Cells")
+    ax.legend(loc='upper left')
+
+    fig.tight_layout()
+    fig.savefig("timing.pdf")
     plt.show()

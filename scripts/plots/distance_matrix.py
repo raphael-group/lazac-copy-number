@@ -29,22 +29,31 @@ if __name__ == "__main__":
     print(m1)
     print(m2)
 
-    results = pd.concat([m1,m2]).stack()\
-                                .groupby(level=[0,1])\
-                                .apply(tuple).unstack()
-    # print(results)
+    results = []
+    for column in m2.columns:
+        for (idx, row) in m2.iterrows():
+            v1 = row[column]
+            v2 = m1.loc[f"sample_{column}", f"sample_{idx}"]
+            results.append((v1, v2))
 
-    results = [r for r in results.to_numpy().flatten() if r != (0, 0)]
     xs, ys = zip(*results)
+
+    xs = np.array(xs) 
+    # xs = xs + np.random.uniform(high=3, size=xs.shape)
+
+    ys = np.array(ys) 
+    # ys = ys + np.random.uniform(high=1.5, size=ys.shape)
+
     fig, ax = plt.subplots()
     sns.scatterplot(x=xs, y=ys, ax=ax)
-    ax.set_xlabel("Distance 1")
-    ax.set_ylabel("Distance 2")
+    ax.set_xlabel("Breaked Distance")
+    ax.set_ylabel("MEDICC2 Distance")
 
     regression = stats.linregress(xs, ys)
     reg_xs = np.linspace(min(xs), max(xs), 1000)
     reg_ys = reg_xs*regression.slope + regression.intercept
     ax.plot(reg_xs, reg_ys, linestyle="dashed")
-    ax.text(0.6, 0.2, f"R^2 = {regression.rvalue:.4}\nP-Value = {regression.pvalue:.4}", transform=ax.transAxes)
+    ax.text(0.6, 0.2, f"R^2 = {regression.rvalue:.4}\nP-Value = {regression.pvalue:.8}", transform=ax.transAxes)
+    fig.savefig("breaked_medicc2_distance_sim_n150_l4000_s2.pdf")
 
     plt.show()
