@@ -65,14 +65,14 @@ if __name__ == "__main__":
             dists = read_tree_distances(eval_file)
 
             benchmark_file = f'data/simulations/{params["algorithm"]}/{name}.benchmark.txt'
-            benchmark = read_benchmark_file(benchmark_file)
+            # benchmark = read_benchmark_file(benchmark_file)
 
             dists = {
                 "rf_score": dists["RF(0.5)_toYuleAvg"],
                 "quartet_score": dists["Quartet_toYuleAvg"]
             }
 
-            row = params | dists | benchmark
+            row = params | dists # | benchmark
             rows.append(row)
 
     pd.DataFrame(rows).to_csv(args.output)

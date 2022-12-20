@@ -30,10 +30,10 @@ breaked_nni_instances = expand(
 
 rule all:
     input:
-        breaked_nj_instances_gundem
+        # breaked_nj_instances_gundem
         # breaked_nj_instances,
         # medicc2_instances,
-        # breaked_nni_instances,
+        breaked_nni_instances,
 
 rule breaked_nj_gundem:
     input:
@@ -70,6 +70,10 @@ rule nj:
         "data/simulations/{wildcards.dist}_nj/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
 
 rule breaked_nni:
+    threads: 8
+    resources:
+        time = "00-04:00:00",
+        mem_mb = 4000,
     input:
         cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles.csv",
         breaked_nj_tree = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
@@ -78,7 +82,7 @@ rule breaked_nni:
     benchmark:
         "data/simulations/breaked_nni/n{ncells}_l{loci}_s{seed}.benchmark.txt"
     shell:
-        "python scripts/breaked_nni.py {input.cn_profiles} {input.breaked_nj_tree} --output {output.breaked_nni_tree}"
+        "python scripts/breaked_nni.py {input.cn_profiles} {input.breaked_nj_tree} --output {output.breaked_nni_tree} --num-threads 8"
         
 rule medicc2:
     input:

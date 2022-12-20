@@ -46,7 +46,7 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--distance", choices=["breaked", "hamming", "rectilinear-break", "rectilinear"],
+        "--distance", choices=["breaked", "hamming", "rectilinear-break", "rectilinear", "breaked-wgd"],
         default="breaked"
     )
 
@@ -68,7 +68,15 @@ if __name__ == "__main__":
     for (n1, p1) in cnp_profiles.items():
         for (n2, p2) in cnp_profiles.items():
             if args.distance == "breaked":
-                pairwise_distances.loc[n1, n2] = p1.breakpoints().distance(p2.breakpoints())
+                pairwise_distances.loc[n1, n2] = p1.breakpoints(args.normal).distance(p2.breakpoints(args.normal))
+            elif args.distance == "breaked-wgd":
+                dists = []
+                for wgd1 in [0, 1, 2, 4, 5]:
+                    for wgd2 in [0, 1, 2, 4, 5]:
+                        d = p1.breakpoints(args.normal + wgd1).distance(p2.breakpoints(args.normal + wgd2))
+                        d += wgd1 + wgd2
+                        dists.append(d)
+                pairwise_distances.loc[n1, n2] = min(dists)
             elif args.distance == "hamming":
                 pairwise_distances.loc[n1, n2] = p1.hamming_distance(p2)
             elif args.distance == "rectilinear":

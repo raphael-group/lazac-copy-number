@@ -2,6 +2,8 @@ import math
 import random
 import argparse
 import sys
+import profile
+import cProfile
 
 import multiprocessing as mp
 import pandas as pd
@@ -315,9 +317,9 @@ def hill_climb_on_edges(scoring_function, current_tree, edge_set):
 
     return current_tree, nni_best_score
 
-def hill_climb(T, scoring_function, threads=16):
+def hill_climb(T, scoring_function, threads=1):
     overall_best_tree = T
-    processor_pool = mp.Pool(threads)
+    # processor_pool = mp.Pool(threads)
     
     chunk_size = math.ceil(len(list(overall_best_tree.edges)) / threads)
 
@@ -329,7 +331,11 @@ def hill_climb(T, scoring_function, threads=16):
         edge_sets = chunks(chunk_size, all_edges)
 
         proc_arguments = [(scoring_function, overall_best_tree, edge_set) for edge_set in edge_sets]
-        hill_climb_trees = processor_pool.starmap(hill_climb_on_edges, proc_arguments)
+        hill_climb_trees = []
+        for args in proc_arguments:
+            hill_climb_tree = hill_climb_on_edges(*args)
+            hill_climb_trees.append(hill_climb_tree)
+        # hill_climb_trees = processor_pool.starmap(hill_climb_on_edges, proc_arguments)
 
         nni_best_tree, nni_best_score = overall_best_tree, overall_best_score
         for hill_climb_tree, hill_climb_score in hill_climb_trees:
@@ -343,7 +349,7 @@ def hill_climb(T, scoring_function, threads=16):
         
         overall_best_tree = nni_best_tree
 
-    processor_pool.close()
+    # processor_pool.close()
     return overall_best_tree
 
 """
@@ -392,6 +398,42 @@ def remove_constant_bins(breakpoint_profiles):
 
     return pd.Series(compressed_breakpoint_profiles)
 
+"""
+Performs stochastic hill climbing routine with 
+rectilinear breakpoint parsimony criterion,
+returning the best tree found.
+"""
+def breaked_nni(return_dict, scoring_function, candidate_trees, thread_id=0, max_iterations=150):
+    count = 0
+    while count < max_iterations:
+        for (i, (T, _)) in enumerate(candidate_trees):
+            candidate_parsimony = scoring_function.score(T)
+            logger.info(f"THREAD {thread_id}: Candidate tree {i + 1} has parsimony {candidate_parsimony}")
+
+        candidate_tree, _ = random.sample(candidate_trees, 1)[0]
+        candidate_tree = stochastic_nni(candidate_tree)
+
+        candidate_tree_optimized = hill_climb(candidate_tree, scoring_function)
+        candidate_tree_optimized_parsimony = scoring_function.score(candidate_tree_optimized)
+
+        if candidate_trees[0][1] <= candidate_tree_optimized_parsimony:
+            if candidate_tree_optimized_parsimony < candidate_trees[-1][1]:
+                    candidate_trees = [(candidate_tree_optimized, candidate_tree_optimized_parsimony)] + candidate_trees[:-1]
+                    candidate_trees = sorted(candidate_trees, key=lambda x: x[1])
+
+            logger.info(f"THREAD {thread_id}: Did not update candidate trees.")
+            count += 1
+            continue
+
+        count = 0
+        candidate_trees = [(candidate_tree_optimized, candidate_tree_optimized_parsimony)] + candidate_trees[:-1]
+        candidate_trees = sorted(candidate_trees, key=lambda x: x[1])
+
+        logger.info(f"THREAD {thread_id}: Updated candidate trees w/ parsimony: {candidate_tree_optimized_parsimony}")
+
+    candidate_trees = sorted(candidate_trees, key=lambda x: x[1])
+    return_dict[thread_id] = candidate_trees[0]
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Solves rectilinear steiner tree problem."
@@ -417,6 +459,10 @@ def parse_arguments():
         "--output", help="Output tree", default="inferred_tree.newick"
     )
 
+    parser.add_argument(
+        "--num-threads", default=4, type=int
+    )
+
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -430,6 +476,8 @@ if __name__ == "__main__":
     elif args.profile_format == "tsv":
         cnp_profiles = pd.read_csv(args.cnp_profile, sep="\t")
 
+    cnp_profiles["node"] = cnp_profiles["node"].astype(str)
+
     cnp_profiles = cnp_profiles.groupby("node").apply(
         lambda df: process_copy_number_profile_df(args.chromosomes, df)
     )
@@ -438,52 +486,29 @@ if __name__ == "__main__":
     breakpoint_profiles = remove_constant_bins(breakpoint_profiles)
     scoring_function = ScoringFunction(breakpoint_profiles)
 
-    candidate_trees = []
-    for aggression in [0, 1.3, 0.2, 0.5, 0.7]:
-        candidate_tree = seed_tree.copy() 
-        if aggression != 0:
-            candidate_tree = stochastic_nni(candidate_tree, aggression=aggression)
-        candidate_parsimony = scoring_function.score(candidate_tree) 
+    # multi processing thread manager
+    manager = mp.Manager()
+    return_dict = manager.dict()
 
-        candidate_trees.append((candidate_tree, candidate_parsimony))
+    procs = []
+    for thread_id in range(args.num_threads):
+        candidate_trees = []
+        for aggression in [0, 0.5, 1.5, 2.5, 3.0]:
+            candidate_tree = seed_tree.copy() 
+            if aggression != 0:
+                candidate_tree = stochastic_nni(candidate_tree, aggression=aggression)
+            candidate_parsimony = scoring_function.score(candidate_tree) 
+            candidate_trees.append((candidate_tree, candidate_parsimony))
 
-    candidate_trees = sorted(candidate_trees, key=lambda x: x[1])[:5]
+        p = mp.Process(target=breaked_nni, args=(return_dict, scoring_function, candidate_trees, thread_id))
+        p.start()
+        procs.append(p)
 
-    count = 0
-    while count < 250:
-        candidate_trees = sorted(candidate_trees, key=lambda x: x[1])
+    for p in procs:
+        p.join()
 
-        for (i, (T, _)) in enumerate(candidate_trees):
-            candidate_parsimony = scoring_function.score(T)
-            logger.info(f"Candidate tree {i + 1} has parsimony {candidate_parsimony}")
-
-        candidate_tree, _ = random.sample(candidate_trees, 1)[0]
-        if len(candidate_trees) != 1:
-            candidate_tree = stochastic_nni(candidate_tree)
-        candidate_tree_optimized = hill_climb(candidate_tree, scoring_function)
-        candidate_tree_optimized_parsimony = scoring_function.score(candidate_tree_optimized)
-
-        if len(candidate_trees) < 5:
-            candidate_trees.append((candidate_tree_optimized, candidate_tree_optimized_parsimony))
-            continue
-
-        if candidate_trees[0][1] <= candidate_tree_optimized_parsimony:
-            if candidate_tree_optimized_parsimony < candidate_trees[-1][1]:
-                candidate_trees = candidate_trees[:-1] + [(candidate_tree_optimized, candidate_tree_optimized_parsimony)]
-
-            logger.info(f"Did not update candidate trees.")
-            count += 1
-            continue
-
-        count = 0
-        logger.info(f"Updated candidate trees w/ parsimony: {candidate_tree_optimized_parsimony}")
-        candidate_trees = [(candidate_tree_optimized, candidate_tree_optimized_parsimony)] + candidate_trees[:-1]
-
-        newick_tree = tree_to_newick(candidate_trees[0][0])
-        with open(args.output, 'w') as f:
-            f.write(f"{newick_tree};")
-
-    candidate_trees = sorted(candidate_trees, key=lambda x: x[1])
-    newick_tree = tree_to_newick(candidate_trees[0][0])
+    inferred_trees = return_dict.values()
+    candidate_trees = sorted(inferred_trees, key=lambda x: x[1])
+    newick_tree = tree_to_newick(inferred_trees[0][0])
     with open(args.output, 'w') as f:
         f.write(f"{newick_tree};")
