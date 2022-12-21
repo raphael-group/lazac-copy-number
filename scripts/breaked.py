@@ -4,6 +4,7 @@ from skbio import DistanceMatrix, TreeNode
 from skbio.tree import nj
 
 from copy_number import *
+from tqdm import tqdm
 
 import argparse
 import heapq
@@ -30,7 +31,7 @@ def parse_arguments():
     )
     
     parser.add_argument(
-        "--profile-format", choices=["csv", "tsv"]
+        "--profile-format", choices=["csv", "tsv"], default="csv"
     )
 
     parser.add_argument(
@@ -65,7 +66,7 @@ if __name__ == "__main__":
     )
 
     pairwise_distances = pd.DataFrame(columns=cnp_profiles.index)
-    for (n1, p1) in cnp_profiles.items():
+    for (n1, p1) in tqdm(cnp_profiles.items()):
         for (n2, p2) in cnp_profiles.items():
             if args.distance == "breaked":
                 pairwise_distances.loc[n1, n2] = p1.breakpoints(args.normal).distance(p2.breakpoints(args.normal))

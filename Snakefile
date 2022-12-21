@@ -25,7 +25,7 @@ medicc2_instances = expand(
 
 breaked_nni_instances = expand(
     "data/simulations/results/breaked_nni/n{cells}_l{loci}_s{seed}_eval.txt",
-    cells=[100, 150], loci=nloci, seed=seeds
+    cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
 )
 
 rule all:
@@ -72,7 +72,7 @@ rule nj:
 rule breaked_nni:
     threads: 8
     resources:
-        time = "00-04:00:00",
+        time = "00-06:00:00",
         mem_mb = 4000,
     input:
         cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles.csv",
@@ -120,6 +120,10 @@ rule nj_perf_compare:
         " -d rf qt tt -o {output.eval_file}"
 
 rule breaked_nni_perf_compare:
+    threads: 1
+    resources:
+        time = "00-00:10:00",
+        mem_mb = 1000
     input:
         tree = "data/simulations/breaked_nni/n{ncells}_l{loci}_s{seed}_tree.newick",
         ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
