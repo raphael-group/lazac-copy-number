@@ -1,9 +1,9 @@
 configure_file(
-    "${breaked_SOURCE_DIR}/include/breaked.h.in" 
-    "${breaked_SOURCE_DIR}/include/breaked.h"
+    "${breaked_SOURCE_DIR}/include/breaked.hpp.in" 
+    "${breaked_SOURCE_DIR}/include/breaked.hpp"
 )
 
-add_executable(breaked breaked.cxx)
+add_executable(breaked breaked.cxx tree_io.cxx)
 
 # add libraries
 target_link_libraries(breaked PRIVATE spdlog)
