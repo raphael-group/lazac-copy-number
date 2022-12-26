@@ -1,10 +1,9 @@
 #include <spdlog/spdlog.h>
 #include <argparse/argparse.hpp>
 
+#include <fstream>
 #include <stdexcept>
 #include <iostream>
-#include <istream>
-#include <stack>
 
 #include "breaked.hpp"
 #include "phylogeny.hpp"
@@ -17,8 +16,8 @@ int main(int argc, char *argv[])
         std::to_string(BREAKED_VERSION_MAJOR) + "." + std::to_string(BREAKED_VERSION_MINOR)
     );
 
-    // program.add_argument("seed_tree")
-    // .help("Seed tree in Newick format.");
+    program.add_argument("seed_tree")
+        .help("Seed tree in Newick format.");
 
     try {
         program.parse_args(argc, argv);
@@ -28,8 +27,12 @@ int main(int argc, char *argv[])
         std::exit(1);
     }
 
-    std::string newick_string("(((AAAAA,B,(C,D)E)F))");
-    auto t = treeio::read_newick_node(newick_string);
+    std::ifstream in(program.get<std::string>("seed_tree"));
+    std::stringstream buffer;
+    buffer << in.rdbuf();
+    std::string seed_tree_newick = buffer.str();
+
+    auto t = treeio::read_newick_node(seed_tree_newick);
     std::cout << treeio::print_newick_tree(t) << std::endl;
 
     return 0;

@@ -1,5 +1,6 @@
 #include "tree_io.hpp"
 #include <sstream>
+#include <iostream>
 
 namespace treeio {
     token read_token(const std::string &newick, size_t position) {
@@ -38,9 +39,9 @@ namespace treeio {
     tree<float> read_newick_node(const std::string &newick, size_t &position) {
         tree<float> root(0);
 
+        // Case 1: Check if leaf
         token t = read_token(newick, position);
-        if (t != (token) separator::LEFT_PAREN){ // we are at a leaf
-            t = read_token(newick, position);
+        if (t != (token) separator::LEFT_PAREN){ 
             if (!std::holds_alternative<std::string>(t)) {
                 root.name = "";
                 position++;
@@ -54,9 +55,9 @@ namespace treeio {
 
         position++;
 
-        // otherwise, read until closing parentheses
+        // Case 2: At internal node
         std::vector<tree<float>> children;
-        while (position < newick.length()) {
+        while (true) {
             t = read_token(newick, position);
             if (t == (token) separator::LEFT_PAREN) {
                 tree<float> child = read_newick_node(newick, position);
@@ -68,10 +69,13 @@ namespace treeio {
                 position++;
                 break;
             } else {
-                // issue is that stream is already partially consumed
                 tree<float> child = read_newick_node(newick, position);
                 children.push_back(child);
             }
+        }
+
+        if (t != (token) separator::RIGHT_PAREN) {
+            throw malformed_parse_exception("Expected right parentheses.");
         }
 
         for (const auto& child : children) {
@@ -80,7 +84,6 @@ namespace treeio {
 
         t = read_token(newick, position);
         if (!std::holds_alternative<std::string>(t)) {
-            position++;
             root.name = "";
         } else {
             root.name = std::get<std::string>(t);
@@ -110,5 +113,4 @@ namespace treeio {
         newick += T.name;
         return newick;
     }
-
 };

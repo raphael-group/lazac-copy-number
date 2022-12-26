@@ -10,7 +10,7 @@
 namespace treeio {
     class malformed_parse_exception : public std::runtime_error {
     public:
-        malformed_parse_exception() : std::runtime_error("Malformed input - failed to parse.") { }
+        malformed_parse_exception(std::string reason) : std::runtime_error("Malformed input - failed to parse.\nReason: " + reason) { }
     };
 
     enum separator {
