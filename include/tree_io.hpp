@@ -5,7 +5,7 @@
 #include <string>
 #include <stdexcept>
 
-#include "phylogeny.hpp"
+#include "digraph.hpp"
 
 namespace treeio {
     class malformed_parse_exception : public std::runtime_error {
@@ -45,10 +45,9 @@ namespace treeio {
          Length -> empty | ":" number
 
     */
-    tree<float> read_newick_node(const std::string &newick, size_t &position);
-    tree<float> read_newick_node(const std::string &newick);
+    digraph<std::string> read_newick_node(const std::string &newick);
 
-    std::string print_newick_tree(const tree<float> &T);
+    std::string print_newick_tree(const digraph<std::string> &T);
 };
 
 #endif

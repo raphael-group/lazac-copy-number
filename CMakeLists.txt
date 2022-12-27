@@ -8,6 +8,7 @@ project(breaked VERSION 1.0)
 add_subdirectory(src/)
 
 target_include_directories(breaked PUBLIC "${breaked_SOURCE_DIR}/include")
+target_include_directories(breaked PUBLIC "${breaked_SOURCE_DIR}/third-party/csv-parser/include")
 
 # compile libraries
 add_subdirectory(third-party/spdlog)

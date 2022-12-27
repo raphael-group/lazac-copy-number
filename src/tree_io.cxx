@@ -36,32 +36,32 @@ namespace treeio {
         return token_stream.str();
     }
 
-    tree<float> read_newick_node(const std::string &newick, size_t &position) {
-        tree<float> root(0);
-
+    void read_newick_node(const std::string &newick, size_t &position,
+                          digraph<std::string>& tree, int root) {
         // Case 1: Check if leaf
         token t = read_token(newick, position);
         if (t != (token) separator::LEFT_PAREN){ 
             if (!std::holds_alternative<std::string>(t)) {
-                root.name = "";
+                tree[root].data = "";
                 position++;
             } else {
-                root.name = std::get<std::string>(t);
-                position += root.name.length();
+                tree[root].data = std::get<std::string>(t);
+                position += tree[root].data.length();
             }
 
-            return root;
+            return;
         }
 
         position++;
 
         // Case 2: At internal node
-        std::vector<tree<float>> children;
+        std::vector<digraph<std::string>> children;
         while (true) {
             t = read_token(newick, position);
             if (t == (token) separator::LEFT_PAREN) {
-                tree<float> child = read_newick_node(newick, position);
-                children.push_back(child);
+                int v = tree.add_vertex("internal");
+                tree.add_edge(root, v);
+                read_newick_node(newick, position, tree, v);
             } else if (t == (token) separator::COMMA) {
                 position++;
                 continue;
@@ -69,8 +69,9 @@ namespace treeio {
                 position++;
                 break;
             } else {
-                tree<float> child = read_newick_node(newick, position);
-                children.push_back(child);
+                int v = tree.add_vertex("internal");
+                tree.add_edge(root, v);
+                read_newick_node(newick, position, tree, v);
             }
         }
 
@@ -78,39 +79,40 @@ namespace treeio {
             throw malformed_parse_exception("Expected right parentheses.");
         }
 
-        for (const auto& child : children) {
-            root.add_child(child);
-        }
-
         t = read_token(newick, position);
         if (!std::holds_alternative<std::string>(t)) {
-            root.name = "";
+            tree[root].data = "";
         } else {
-            root.name = std::get<std::string>(t);
-            position += root.name.length();
+            tree[root].data = std::get<std::string>(t);
+            position += tree[root].data.length();
         }
-
-        return root;
     }
 
-    tree<float> read_newick_node(const std::string &newick) {
+    digraph<std::string> read_newick_node(const std::string &newick) {
+        digraph<std::string> t;
+        int root = t.add_vertex("root");
         size_t position = 0;
-        return read_newick_node(newick, position);
+        read_newick_node(newick, position, t, root);
+        return t;
     }
 
-    std::string print_newick_tree(const tree<float> &T) {
-        if (!T.has_children()) return T.name;
+    std::string print_newick_tree(const digraph<std::string> &T, int root) {
+        if (T.out_degree(root) == 0) return T[root].data;
 
         std::string newick("(");
         int counter = 0;
-        for (const auto& child : T.get_children()) {
+        for (const auto& child: T.neighbors(root)) {
             if(counter != 0) newick += ",";
-            newick += print_newick_tree(child);
+            newick += print_newick_tree(T, child);
             counter++;
         }
 
         newick += ")";
-        newick += T.name;
+        newick += T[root].data;
         return newick;
+    }
+
+    std::string print_newick_tree(const digraph<std::string> &T) {
+        return print_newick_tree(T, 0);
     }
 };
