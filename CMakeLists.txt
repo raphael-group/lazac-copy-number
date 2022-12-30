@@ -12,5 +12,6 @@ target_include_directories(breaked PUBLIC "${breaked_SOURCE_DIR}/third-party/csv
 
 # compile libraries
 add_subdirectory(third-party/spdlog)
+add_subdirectory(third-party/pprint)
 add_subdirectory(third-party/csv-parser)
 add_subdirectory(third-party/argparse)

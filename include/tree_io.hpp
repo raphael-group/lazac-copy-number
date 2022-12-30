@@ -46,7 +46,6 @@ namespace treeio {
 
     */
     digraph<std::string> read_newick_node(const std::string &newick);
-
     std::string print_newick_tree(const digraph<std::string> &T);
 };
 
