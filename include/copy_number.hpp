@@ -44,10 +44,6 @@ struct copynumber_profile {
     copynumber_profile() {};
     copynumber_profile(std::vector<int> profile, std::vector<genomic_bin> bins) :
         profile(profile), bins(bins) {};
-
-    copynumber_profile operator=(const copynumber_profile &o) const {
-        return copynumber_profile(o.profile, o.bins);
-    }
 };
 
 struct breakpoint_profile {
@@ -57,10 +53,6 @@ struct breakpoint_profile {
     breakpoint_profile() {};
     breakpoint_profile(std::vector<int> profile, std::vector<genomic_bin> bins) :
         profile(profile), bins(bins) {};
-
-    breakpoint_profile operator=(const breakpoint_profile &o) const {
-        return breakpoint_profile(o.profile, o.bins);
-    }
 };
 
 /*

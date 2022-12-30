@@ -11,6 +11,7 @@
   a DiGraph.
 */
 
+
 template <class T>
 class vertex {
 public:
@@ -46,6 +47,28 @@ public:
         pred[v].insert(u);
     }
 
+    std::vector<int> nodes() {
+        std::vector<int> vertices;
+        for (int i = 0; i < id_counter; i++) {
+            vertices.push_back(i);
+        }
+        return vertices;
+    }
+
+    std::vector<std::pair<int, int>> edges() {
+        std::vector<std::pair<int, int>> edges;
+        for (const auto &[u, vs] : succ) {
+            for (const auto &v : vs) {
+                edges.push_back(std::make_pair(u, v));
+            }
+        }
+        return edges;
+    }
+
+    /* WARNING: does not maintain invariant
+       that all edges are between 0 and N. We 
+       will need to update the code to fix this.
+     */
     void delete_vertex(int u) {
         // removes u and all (v, u) edges
         vertices.erase(u);
@@ -72,15 +95,6 @@ public:
     size_t out_degree(int u) const {
         return succ.at(u).size();
     }
-
-    //std::string to_string() const {
-    //std::string out;
-    //for (const auto& kv : succ) {
-    //out += kv.
-        //}
-    //
-    //}
 };
 
 #endif
-
