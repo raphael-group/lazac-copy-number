@@ -42,12 +42,16 @@ public:
     }
 
     void add_edge(int u, int v) {
-        // assert u and v in graph
         succ[u].insert(v);
         pred[v].insert(u);
     }
 
-    std::vector<int> nodes() {
+    void remove_edge(int u, int v) {
+        succ[u].erase(v);
+        pred[v].erase(u);
+    }
+
+    std::vector<int> nodes() const {
         std::vector<int> vertices;
         for (int i = 0; i < id_counter; i++) {
             vertices.push_back(i);
@@ -55,7 +59,7 @@ public:
         return vertices;
     }
 
-    std::vector<std::pair<int, int>> edges() {
+    std::vector<std::pair<int, int>> edges() const {
         std::vector<std::pair<int, int>> edges;
         for (const auto &[u, vs] : succ) {
             for (const auto &v : vs) {
@@ -65,9 +69,12 @@ public:
         return edges;
     }
 
-    /* WARNING: does not maintain invariant
+    /* TODO
+       WARNING: does not maintain invariant
        that all edges are between 0 and N. We 
        will need to update the code to fix this.
+       Probably should return a map from old to new
+       vertex labels.
      */
     void delete_vertex(int u) {
         // removes u and all (v, u) edges
@@ -88,7 +95,11 @@ public:
         return vertices.at(u);
     }
 
-    const std::set<int>& neighbors(int u) const {
+    const std::set<int>& predecessors(int u) const {
+        return pred.at(u);
+    }
+
+    const std::set<int>& successors(int u) const {
         return succ.at(u);
     }
 

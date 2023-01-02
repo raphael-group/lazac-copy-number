@@ -101,7 +101,7 @@ namespace treeio {
 
         std::string newick("(");
         int counter = 0;
-        for (const auto& child: T.neighbors(root)) {
+        for (const auto& child: T.successors(root)) {
             if(counter != 0) newick += ",";
             newick += print_newick_tree(T, child);
             counter++;
