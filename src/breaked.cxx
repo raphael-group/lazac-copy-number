@@ -118,6 +118,7 @@ int main(int argc, char *argv[])
         std::cout << "here" << std::endl;
         small_rectilinear(t2, 0);
         std::cout << t2[0].data.score << std::endl;
+        hill_climb(t2);
     }
 
     return 0;

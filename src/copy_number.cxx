@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <ostream>
+#include <limits>
 
 namespace copynumber {
     namespace {
@@ -184,6 +185,71 @@ namespace copynumber {
                 callstack.push(child);
             }
         }
+    }
+
+    std::optional<std::tuple<int, int, int, int>> greedy_nni(digraph<rectilinear_vertex_data> &t) {
+        std::vector<std::pair<int, int>> internal_edges;
+        for (auto [u, v] : t.edges()) {
+            if (t.successors(v).empty()) continue;
+            internal_edges.push_back(std::make_pair(u, v));
+        }
+
+        int best_score = std::numeric_limits<int>::max(); // i.e. best_score = \infty
+        std::optional<std::tuple<int, int, int, int>> best_move;
+        for (auto [u, v] : internal_edges) {
+            std::vector<int> u_children;
+            std::vector<int> v_children;
+
+            for (int w : t.successors(u)) {
+                if (w != v) {
+                    u_children.push_back(w);
+                }
+            }
+
+            for (int w : t.successors(v)) {
+                v_children.push_back(w);
+            }
+
+            for (auto w : u_children) {
+                for (auto z : v_children) {
+                    nni(t, u, w, v, z);
+                    unvisit(t, 0, v);
+                    small_rectilinear(t, 0);
+
+                    int score = t[0].data.score;
+                    if (score < best_score) {
+                        best_score = score;
+                        best_move = std::make_tuple(u, w, v, z);
+                    }
+
+                    undo_nni(t, u, w, v, z);
+                    unvisit(t, 0, v);
+                    // small_rectilinear(t, 0); // i don't think this is even necessary...
+                }
+            }
+        }
+
+        return best_move;
+    }
+
+    digraph<rectilinear_vertex_data> hill_climb(digraph<rectilinear_vertex_data> t) {
+        int current_score = t[0].data.score;
+        while (true) {
+            auto best_move = greedy_nni(t);
+            if (!best_move) break;
+
+            auto [u, w, v, z] = *best_move;
+            nni(t, u, w, v, z);
+            unvisit(t, 0, v);
+            small_rectilinear(t, 0);
+            int new_score = t[0].data.score;
+
+            if (current_score <= new_score) break;
+            std::cout << "Updating current score " << current_score << " to " << new_score << std::endl;
+            current_score = new_score;
+        }
+
+        return t;
     }
 
     digraph<rectilinear_vertex_data> stochastic_nni(const digraph<rectilinear_vertex_data>& t, std::ranlux48_base& gen, float aggression) {

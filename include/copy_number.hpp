@@ -136,6 +136,8 @@ namespace copynumber {
       Assumes the root is the 0 vertex.
     */
     digraph<rectilinear_vertex_data> stochastic_nni(const digraph<rectilinear_vertex_data>& t, std::ranlux48_base& gen, float aggression);
+
+    digraph<rectilinear_vertex_data> hill_climb(digraph<rectilinear_vertex_data> t);
 };
 
 #endif
