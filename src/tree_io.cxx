@@ -95,4 +95,5 @@ namespace treeio {
         read_newick_node(newick, position, t, root);
         return t;
     }
+
 };

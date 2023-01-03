@@ -43,22 +43,22 @@ int main(int argc, char *argv[])
     );
 
     program.add_argument("cn_profile")
-        .help("Copy number profile in CSV format.");
+        .help("copy number profile in CSV format");
 
     program.add_argument("seed_tree")
-        .help("Seed tree in Newick format.");
+        .help("seed tree in Newick format.");
 
     program.add_argument("-o", "--output")
-        .help("Prefix of the output files.")
+        .help("prefix of the output files")
         .required();
 
     program.add_argument("-a", "--aggression")
-        .help("Aggression of stochastic perturbation in (0, infinity)")
+        .help("aggression of stochastic perturbation in (0, infinity)")
         .default_value(1.0)
         .scan<'g', double>();
 
     program.add_argument("-i", "--iterations")
-        .help("Number of iterations to perform without improvement before stopping.")
+        .help("number of iterations to perform without improvement before stopping")
         .default_value(100)
         .scan<'d', int>();
 
