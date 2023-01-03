@@ -1,3 +1,4 @@
+#include <pprint.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <argparse/argparse.hpp>
@@ -10,7 +11,6 @@
 #include <vector>
 #include <numeric>
 #include <algorithm>
-#include <pprint.hpp>
 #include <optional>
 #include <stack>
 #include <tuple>
@@ -30,16 +30,34 @@ int main(int argc, char *argv[])
 
     auto error_logger = spdlog::stderr_color_mt("error");
 
+    std::stringstream printer_stream;
+    pprint::PrettyPrinter printer(printer_stream);
+    printer.compact(true);
+
     argparse::ArgumentParser program(
         "breaked",
         std::to_string(BREAKED_VERSION_MAJOR) + "." + std::to_string(BREAKED_VERSION_MINOR)
     );
 
+    program.add_argument("cn_profile")
+        .help("Copy number profile in CSV format.");
+
     program.add_argument("seed_tree")
         .help("Seed tree in Newick format.");
 
-    program.add_argument("cn_profile")
-        .help("Copy number profile in CSV format.");
+    program.add_argument("-o", "--output")
+        .help("Prefix of the output files.")
+        .required();
+
+    program.add_argument("-a", "--aggression")
+        .help("Aggression of stochastic perturbation in (0, infinity)")
+        .default_value(1.0)
+        .scan<'g', float>();
+
+    program.add_argument("-i", "--iterations")
+        .help("Number of iterations to perform without improvement before stopping.")
+        .default_value(100)
+        .scan<'d', int>();
 
     try {
         program.parse_args(argc, argv);
@@ -74,7 +92,6 @@ int main(int argc, char *argv[])
         cn_profiles[node].bins.push_back(bin);
     }
 
-    pprint::PrettyPrinter printer;
     std::map<std::string, breakpoint_profile> bp_profiles;
     for (const auto &[name, cn_profile] : cn_profiles) {
         auto bp_profile = convert_to_breakpoint_profile(cn_profile, 2);
@@ -109,16 +126,57 @@ int main(int argc, char *argv[])
 
     std::random_device rd;
     std::ranlux48_base gen(rd());
-    for (int i = 0; i < 2; i++) {
-        small_rectilinear(rectilinear_tree, 0);
-        std::cout << rectilinear_tree[0].data.score << std::endl;
-        unvisit(rectilinear_tree, 0);
 
-        digraph<rectilinear_vertex_data> t2 = stochastic_nni(rectilinear_tree, gen, 0.25);
-        std::cout << "here" << std::endl;
-        small_rectilinear(t2, 0);
-        std::cout << t2[0].data.score << std::endl;
-        hill_climb(t2);
+    /*
+      Candidate tree set is obtained by randomly
+      perturbing candidate trees.
+     */
+    std::vector<digraph<rectilinear_vertex_data>> candidate_trees;
+    float aggressions[] = {0, 0.25, 0.50, 0.75, 1, 1.25, 1.5, 1.75};
+    for (float aggression : aggressions) {
+        digraph<rectilinear_vertex_data> t = stochastic_nni(rectilinear_tree, gen, aggression);
+        candidate_trees.push_back(t);
+    }
+
+    int counter = 0, iteration = 0;
+    for (; counter < program.get<int>("-i"); iteration++) {
+        for (auto& candidate_tree : candidate_trees) {
+            small_rectilinear(candidate_tree, 0);
+        }
+
+        std::sort(candidate_trees.begin(), candidate_trees.end(),
+                  [](const digraph<rectilinear_vertex_data> &a, const digraph<rectilinear_vertex_data> &b) {
+                      return a[0].data.score > b[0].data.score;
+        });
+
+        std::vector<int> scores;
+        for (auto& candidate_tree : candidate_trees) {
+            scores.push_back(candidate_tree[0].data.score);
+        }
+
+        printer.print(scores);
+        std::string candidate_scores_string = printer_stream.str();
+        candidate_scores_string = candidate_scores_string.substr(0, candidate_scores_string.length() - 1);
+        spdlog::info("Candidate tree scores @ iteration {}: {}", iteration, candidate_scores_string);
+        printer_stream.str("");
+
+        // Select and perturb candidate tree.
+        std::uniform_int_distribution<int> distrib(0, candidate_trees.size() - 1);
+        int candidate_tree_idx = distrib(gen);
+
+        digraph<rectilinear_vertex_data> candidate_tree = candidate_trees[candidate_tree_idx];
+        std::cout << program.get<float>("-a") << std::endl;
+        stochastic_nni(candidate_tree, gen, program.get<float>("-a"));
+
+        digraph<rectilinear_vertex_data> updated_tree = hill_climb(candidate_tree);
+        if (updated_tree[0].data.score < candidate_trees[0][0].data.score) {
+            candidate_trees[0] = updated_tree;
+            spdlog::info("Updated candidate tree set.");
+            counter = 0;
+            continue;
+        } 
+
+        counter++;
     }
 
     return 0;

@@ -187,6 +187,13 @@ namespace copynumber {
         }
     }
 
+    /*
+      Performs all NNIs in the immediate neighborhood of the passed in
+      tree and returns the best move. Does not modify the input tree.
+      
+      Requires:
+        - t satisfies the *rectilinear invariant*.
+     */
     std::optional<std::tuple<int, int, int, int>> greedy_nni(digraph<rectilinear_vertex_data> &t) {
         std::vector<std::pair<int, int>> internal_edges;
         for (auto [u, v] : t.edges()) {
@@ -224,7 +231,6 @@ namespace copynumber {
 
                     undo_nni(t, u, w, v, z);
                     unvisit(t, 0, v);
-                    // small_rectilinear(t, 0); // i don't think this is even necessary...
                 }
             }
         }
@@ -245,7 +251,6 @@ namespace copynumber {
             int new_score = t[0].data.score;
 
             if (current_score <= new_score) break;
-            std::cout << "Updating current score " << current_score << " to " << new_score << std::endl;
             current_score = new_score;
         }
 
