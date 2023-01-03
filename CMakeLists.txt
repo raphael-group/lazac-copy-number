@@ -18,8 +18,12 @@ add_subdirectory(src/)
 target_include_directories(breaked PUBLIC "${breaked_SOURCE_DIR}/include")
 target_include_directories(breaked PUBLIC "${breaked_SOURCE_DIR}/third-party/csv-parser/include")
 
+# turn off JSON library tests
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+
 # compile libraries
 add_subdirectory(third-party/spdlog)
 add_subdirectory(third-party/pprint)
 add_subdirectory(third-party/csv-parser)
 add_subdirectory(third-party/argparse)
+add_subdirectory(third-party/json)

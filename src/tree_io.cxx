@@ -95,24 +95,4 @@ namespace treeio {
         read_newick_node(newick, position, t, root);
         return t;
     }
-
-    std::string print_newick_tree(const digraph<std::string> &T, int root) {
-        if (T.out_degree(root) == 0) return T[root].data;
-
-        std::string newick("(");
-        int counter = 0;
-        for (const auto& child: T.successors(root)) {
-            if(counter != 0) newick += ",";
-            newick += print_newick_tree(T, child);
-            counter++;
-        }
-
-        newick += ")";
-        newick += T[root].data;
-        return newick;
-    }
-
-    std::string print_newick_tree(const digraph<std::string> &T) {
-        return print_newick_tree(T, 0);
-    }
 };

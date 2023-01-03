@@ -46,7 +46,32 @@ namespace treeio {
 
     */
     digraph<std::string> read_newick_node(const std::string &newick);
-    std::string print_newick_tree(const digraph<std::string> &T);
+
+    /*
+      Requires: 
+        - type T has a .name attribute for printing.
+     */
+    template<class T>
+    std::string print_newick_tree(const digraph<T> &tree, int root) {
+        if (tree.out_degree(root) == 0) return tree[root].data.name;
+
+        std::string newick("(");
+        int counter = 0;
+        for (const auto& child: tree.successors(root)) {
+            if(counter != 0) newick += ",";
+            newick += print_newick_tree(tree, child);
+            counter++;
+        }
+
+        newick += ")";
+        newick += tree[root].data.name;
+        return newick;
+    }
+
+    template<class T>
+    std::string print_newick_tree(const digraph<T> &tree) {
+        return print_newick_tree(tree, 0);
+    }
 };
 
 #endif

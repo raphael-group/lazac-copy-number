@@ -1,4 +1,5 @@
 #include <pprint.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <argparse/argparse.hpp>
@@ -22,6 +23,8 @@
 
 using namespace std;
 using namespace copynumber;
+
+using json = nlohmann::json;
 
 int main(int argc, char *argv[])
 {
@@ -52,7 +55,7 @@ int main(int argc, char *argv[])
     program.add_argument("-a", "--aggression")
         .help("Aggression of stochastic perturbation in (0, infinity)")
         .default_value(1.0)
-        .scan<'g', float>();
+        .scan<'g', double>();
 
     program.add_argument("-i", "--iterations")
         .help("Number of iterations to perform without improvement before stopping.")
@@ -138,6 +141,7 @@ int main(int argc, char *argv[])
         candidate_trees.push_back(t);
     }
 
+    json progress_information;
     int counter = 0, iteration = 0;
     for (; counter < program.get<int>("-i"); iteration++) {
         for (auto& candidate_tree : candidate_trees) {
@@ -154,6 +158,11 @@ int main(int argc, char *argv[])
             scores.push_back(candidate_tree[0].data.score);
         }
 
+        json progress_information_i;
+        progress_information_i["scores"] = scores;
+        progress_information_i["iteration"] = iteration;
+        progress_information.push_back(progress_information_i);
+
         printer.print(scores);
         std::string candidate_scores_string = printer_stream.str();
         candidate_scores_string = candidate_scores_string.substr(0, candidate_scores_string.length() - 1);
@@ -165,8 +174,7 @@ int main(int argc, char *argv[])
         int candidate_tree_idx = distrib(gen);
 
         digraph<rectilinear_vertex_data> candidate_tree = candidate_trees[candidate_tree_idx];
-        std::cout << program.get<float>("-a") << std::endl;
-        stochastic_nni(candidate_tree, gen, program.get<float>("-a"));
+        stochastic_nni(candidate_tree, gen, program.get<double>("-a"));
 
         digraph<rectilinear_vertex_data> updated_tree = hill_climb(candidate_tree);
         if (updated_tree[0].data.score < candidate_trees[0][0].data.score) {
@@ -178,6 +186,24 @@ int main(int argc, char *argv[])
 
         counter++;
     }
+
+    for (auto& candidate_tree : candidate_trees) {
+        small_rectilinear(candidate_tree, 0);
+    }
+
+    std::sort(candidate_trees.begin(), candidate_trees.end(),
+              [](const digraph<rectilinear_vertex_data> &a, const digraph<rectilinear_vertex_data> &b) {
+                  return a[0].data.score > b[0].data.score;
+              });
+
+    std::string newick_string = treeio::print_newick_tree(candidate_trees[candidate_trees.size() - 1]);
+    newick_string += ";";
+
+    std::ofstream newick_output(program.get<std::string>("-o") + "_tree.newick", std::ios::out);
+    newick_output << newick_string;
+
+    std::ofstream info_output(program.get<std::string>("-o") + "_info.json", std::ios::out);
+    info_output << progress_information.dump();
 
     return 0;
 }
