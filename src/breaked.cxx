@@ -26,59 +26,13 @@ using namespace copynumber;
 
 using json = nlohmann::json;
 
-int main(int argc, char *argv[])
-{
-    auto console_logger = spdlog::stdout_color_mt("breaked");
-    spdlog::set_default_logger(console_logger);
-
-    auto error_logger = spdlog::stderr_color_mt("error");
-
-    std::stringstream printer_stream;
-    pprint::PrettyPrinter printer(printer_stream);
-    printer.compact(true);
-
-    argparse::ArgumentParser program(
-        "breaked",
-        std::to_string(BREAKED_VERSION_MAJOR) + "." + std::to_string(BREAKED_VERSION_MINOR)
-    );
-
-    program.add_argument("cn_profile")
-        .help("copy number profile in CSV format");
-
-    program.add_argument("seed_tree")
-        .help("seed tree in Newick format.");
-
-    program.add_argument("-o", "--output")
-        .help("prefix of the output files")
-        .required();
-
-    program.add_argument("-a", "--aggression")
-        .help("aggression of stochastic perturbation in (0, infinity)")
-        .default_value(1.0)
-        .scan<'g', double>();
-
-    program.add_argument("-i", "--iterations")
-        .help("number of iterations to perform without improvement before stopping")
-        .default_value(100)
-        .scan<'d', int>();
-
-    try {
-        program.parse_args(argc, argv);
-    } catch (const std::runtime_error& err) {
-        std::cerr << err.what() << std::endl;
-        std::cerr << program;
-        std::exit(1);
-    }
-
-    std::ifstream in(program.get<std::string>("seed_tree"));
-    std::stringstream buffer;
-    buffer << in.rdbuf();
-    std::string seed_tree_newick = buffer.str();
-
-    digraph<std::string> t = treeio::read_newick_node(seed_tree_newick);
-
+/*
+  Reads copy number profiles from a CSV
+  file representation of the profiles.
+*/
+std::map<std::string, copynumber_profile> read_cn_profiles(std::string cn_profile_file) {
     std::map<std::string, copynumber_profile> cn_profiles;
-    csv::CSVReader reader(program.get<std::string>("cn_profile"));
+    csv::CSVReader reader(cn_profile_file);
     for (const csv::CSVRow &row: reader) {
         std::string node = row["node"].get<std::string>();
         std::string chrom = row["chrom"].get<std::string>();
@@ -95,6 +49,48 @@ int main(int argc, char *argv[])
         cn_profiles[node].bins.push_back(bin);
     }
 
+    return cn_profiles;
+}
+
+void do_distance(argparse::ArgumentParser distance) {
+    std::map<std::string, copynumber_profile> cn_profiles = read_cn_profiles(distance.get<std::string>("cn_profile"));
+    std::map<std::string, breakpoint_profile> bp_profiles;
+    for (const auto &[name, cn_profile] : cn_profiles) {
+        auto bp_profile = convert_to_breakpoint_profile(cn_profile, 2);
+        bp_profiles[name] = bp_profile;
+    }
+
+    std::vector<std::string> names; 
+    for (const auto& [name, _] : bp_profiles) {
+        names.push_back(name);
+    }
+
+    std::sort(names.begin(), names.end());
+
+    // we use a simple representation of a matrix
+    // since it is only used for this purpose
+    std::vector<std::vector<int>> distance_matrix;
+    for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
+        for (std::vector<int>::size_type j = i; j < names.size(); j++) {
+            int dist = breakpoint_magnitude(bp_profiles[names[i]] - bp_profiles[names[j]]);
+            std::cout << names[i] << "-" << names[j] << ":" << dist << std::endl;
+        }
+    }
+}
+
+void do_nni(argparse::ArgumentParser nni) {
+    std::stringstream printer_stream;
+    pprint::PrettyPrinter printer(printer_stream);
+    printer.compact(true);
+
+    std::ifstream in(nni.get<std::string>("seed_tree"));
+    std::stringstream buffer;
+    buffer << in.rdbuf();
+    std::string seed_tree_newick = buffer.str();
+
+    digraph<std::string> t = treeio::read_newick_node(seed_tree_newick);
+
+    std::map<std::string, copynumber_profile> cn_profiles = read_cn_profiles(nni.get<std::string>("cn_profile"));
     std::map<std::string, breakpoint_profile> bp_profiles;
     for (const auto &[name, cn_profile] : cn_profiles) {
         auto bp_profile = convert_to_breakpoint_profile(cn_profile, 2);
@@ -143,7 +139,7 @@ int main(int argc, char *argv[])
 
     json progress_information;
     int counter = 0, iteration = 0;
-    for (; counter < program.get<int>("-i"); iteration++) {
+    for (; counter < nni.get<int>("-i"); iteration++) {
         for (auto& candidate_tree : candidate_trees) {
             small_rectilinear(candidate_tree, 0);
         }
@@ -174,7 +170,7 @@ int main(int argc, char *argv[])
         int candidate_tree_idx = distrib(gen);
 
         digraph<rectilinear_vertex_data> candidate_tree = candidate_trees[candidate_tree_idx];
-        stochastic_nni(candidate_tree, gen, program.get<double>("-a"));
+        stochastic_nni(candidate_tree, gen, nni.get<double>("-a"));
 
         digraph<rectilinear_vertex_data> updated_tree = hill_climb(candidate_tree);
         if (updated_tree[0].data.score < candidate_trees[0][0].data.score) {
@@ -199,11 +195,77 @@ int main(int argc, char *argv[])
     std::string newick_string = treeio::print_newick_tree(candidate_trees[candidate_trees.size() - 1]);
     newick_string += ";";
 
-    std::ofstream newick_output(program.get<std::string>("-o") + "_tree.newick", std::ios::out);
+    std::ofstream newick_output(nni.get<std::string>("-o") + "_tree.newick", std::ios::out);
     newick_output << newick_string;
 
-    std::ofstream info_output(program.get<std::string>("-o") + "_info.json", std::ios::out);
+    std::ofstream info_output(nni.get<std::string>("-o") + "_info.json", std::ios::out);
     info_output << progress_information.dump();
+}
+
+int main(int argc, char *argv[])
+{
+    auto console_logger = spdlog::stdout_color_mt("breaked");
+    spdlog::set_default_logger(console_logger);
+
+    auto error_logger = spdlog::stderr_color_mt("error");
+
+
+    argparse::ArgumentParser program(
+        "breaked",
+        std::to_string(BREAKED_VERSION_MAJOR) + "." + std::to_string(BREAKED_VERSION_MINOR)
+    );
+
+    argparse::ArgumentParser distance(
+        "distance"
+    );
+
+    distance.add_description("Computes a distance matrix on copy number profiles");
+
+    distance.add_argument("cn_profile")
+        .help("copy number profile in CSV format");
+
+    argparse::ArgumentParser nni(
+        "nni"
+    );
+
+    nni.add_description("Infers a copy number tree using NNI operations");
+
+    nni.add_argument("cn_profile")
+        .help("copy number profile in CSV format");
+
+    nni.add_argument("seed_tree")
+        .help("seed tree in Newick format.");
+
+    nni.add_argument("-o", "--output")
+        .help("prefix of the output files")
+        .required();
+
+    nni.add_argument("-a", "--aggression")
+        .help("aggression of stochastic perturbation in (0, infinity)")
+        .default_value(1.0)
+        .scan<'g', double>();
+
+    nni.add_argument("-i", "--iterations")
+        .help("number of iterations to perform without improvement before stopping")
+        .default_value(100)
+        .scan<'d', int>();
+
+    program.add_subparser(nni);
+    program.add_subparser(distance);
+    
+    try {
+        program.parse_args(argc, argv);
+    } catch (const std::runtime_error& err) {
+        std::cerr << err.what() << std::endl;
+        std::cerr << program;
+        std::exit(1);
+    }
+
+    if (program.is_subcommand_used(nni)) {
+        do_nni(nni);
+    } else if (program.is_subcommand_used(distance)) {
+        do_distance(distance);
+    }
 
     return 0;
 }

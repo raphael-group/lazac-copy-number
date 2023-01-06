@@ -14,6 +14,7 @@ namespace copynumber {
             return distrib(gen);
         }
     }
+
     std::ostream& operator<<(std::ostream& os, const genomic_bin& bin) {
         os << bin.chromosome << ":" << bin.allele << ":" << bin.start << "-" << bin.end;
         return os;
@@ -51,6 +52,52 @@ namespace copynumber {
         }
 
         return bp;
+    }
+
+    /*
+      Computes the breakpoint magnitude on a max-heap
+      containing the breakpoint profile's entries.
+     */
+    int breakpoint_magnitude(std::vector<int>& breakpoint_heap) {
+        int entries = breakpoint_heap.size();
+        int magnitude = 0;
+        while (entries > 1) {
+            for (int i = 0; i < 2; i++) {
+                int& t = breakpoint_heap[0];
+                std::pop_heap(breakpoint_heap.begin(), breakpoint_heap.end());
+                if (t - 1 != 0) {
+                    t -= 1;
+                    std::push_heap(breakpoint_heap.begin(), breakpoint_heap.end());
+                } else {
+                    entries -= 1;
+                }
+            }
+
+            magnitude += 1;
+        }
+
+        if (entries == 1) {
+            magnitude += breakpoint_heap[0];
+        }
+
+        return magnitude;
+    }
+
+    /*
+      Computes the breakpoint magnitude of a *chromosome and allele sorted*
+      chromosome breakpoint profile.
+     */
+    int breakpoint_magnitude(const breakpoint_profile& p) {
+        std::vector<int> pos_heap, neg_heap;
+        for (int v : p.profile) {
+            if (v < 0) neg_heap.push_back(-v);
+            if (v > 0) pos_heap.push_back(v);
+        }
+
+        std::make_heap(pos_heap.begin(), pos_heap.end());
+        std::make_heap(neg_heap.begin(), neg_heap.end());
+
+        return breakpoint_magnitude(pos_heap) + breakpoint_magnitude(neg_heap);
     }
 
     breakpoint_profile convert_to_breakpoint_profile(const copynumber_profile &p, int diploid_cn);
@@ -150,7 +197,6 @@ namespace copynumber {
         }
     }
 
-
     void nni(digraph<rectilinear_vertex_data>& t, int u, int w, int v, int z) {
         t.remove_edge(u, w);
         t.remove_edge(v, z);
@@ -240,7 +286,8 @@ namespace copynumber {
 
     digraph<rectilinear_vertex_data> hill_climb(digraph<rectilinear_vertex_data> t) {
         int current_score = t[0].data.score;
-        while (true) {
+        int iterations = 0;
+        for (; true; iterations++) {
             auto best_move = greedy_nni(t);
             if (!best_move) break;
 

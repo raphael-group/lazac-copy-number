@@ -60,6 +60,27 @@ namespace copynumber {
         breakpoint_profile() {};
         breakpoint_profile(std::vector<int> profile, std::vector<genomic_bin> bins) :
             profile(profile), bins(bins) {};
+
+        breakpoint_profile operator+(const breakpoint_profile& other) const {
+            breakpoint_profile result;
+            result.profile = std::vector<int>(this->profile.size());
+            for (std::vector<int>::size_type i = 0; i < this->profile.size(); i++) {
+                result.profile[i] = this->profile[i] + other.profile[i];
+            }
+            result.bins = this->bins;
+            return result;
+        }
+
+        breakpoint_profile operator-(const breakpoint_profile& other) const {
+            breakpoint_profile result;
+            result.profile = std::vector<int>(this->profile.size());
+            for (std::vector<int>::size_type i = 0; i < this->profile.size(); i++) {
+                result.profile[i] = this->profile[i] - other.profile[i];
+            }
+ 
+            result.bins = this->bins;
+            return result;
+        }
     };
 
     struct breakpoint_vertex_data {
@@ -136,8 +157,13 @@ namespace copynumber {
       Assumes the root is the 0 vertex.
     */
     digraph<rectilinear_vertex_data> stochastic_nni(const digraph<rectilinear_vertex_data>& t, std::ranlux48_base& gen, float aggression);
-
     digraph<rectilinear_vertex_data> hill_climb(digraph<rectilinear_vertex_data> t);
+
+    /*
+      Computes the breakpoint magnitude of a *chromosome and allele sorted*
+      chromosome breakpoint profile.
+     */
+    int breakpoint_magnitude(const breakpoint_profile& p);
 };
 
 #endif
