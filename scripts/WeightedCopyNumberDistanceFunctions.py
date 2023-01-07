@@ -299,7 +299,7 @@ def main(args):
     dm = DistanceMatrix(dist_mat, list(map(str, sample_list)))
     tree = nj(dm)
     
-    pd.DataFrame(dist_mat, columns = sample_list, index = sample_list).to_csv(f'{args.o}_distances.csv')
+    pd.DataFrame(dist_mat, columns = sample_list, index = sample_list).to_csv(f'{args.o}_pairwise_distances.csv')
     tree.write(f'{args.o}_tree.newick')
         
 if __name__ == "__main__":

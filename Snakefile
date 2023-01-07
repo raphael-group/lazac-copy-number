@@ -1,3 +1,4 @@
+#
 ncells = [100, 150, 200, 250, 300]
 nloci  = [1000, 2000, 3000, 4000]
 seeds  = [0, 1, 2, 3, 4, 5, 6]
@@ -28,12 +29,19 @@ breaked_nni_instances = expand(
     cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
 )
 
+WCND_instances = expand(
+    "data/simulations/WCND/n{cells}_l{loci}_s{seed}_tree.newick",
+    cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
+)
+
+
 rule all:
     input:
         # breaked_nj_instances_gundem
         # breaked_nj_instances,
         # medicc2_instances,
-        breaked_nni_instances,
+        WCND_instances,
+        #breaked_nni_instances,
 
 rule breaked_nj_gundem:
     input:
@@ -56,6 +64,19 @@ rule conet_simulation:
     shell:
         "python scripts/simulations.py -l {wildcards.loci} -n {wildcards.ncells} -s {wildcards.seed}"
         " --output data/simulations/ground_truth/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
+
+rule WCND:
+    input:
+        cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles.csv",
+    output:
+        tree = "data/simulations/WCND/n{ncells}_l{loci}_s{seed}_tree.newick",
+        pairwise_distances = "data/simulations/WCND/n{ncells}_l{loci}_s{seed}_pairwise_distances.csv"
+    benchmark:
+        "data/simulations/WCND/n{ncells}_l{loci}_s{seed}.benchmark.txt"
+    shell:
+        "python scripts/breaked.py -i {input.cn_profiles} -o "
+        "data/simulations/WCND/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
+        
 
 rule nj:
     input:
