@@ -69,12 +69,39 @@ void do_distance(argparse::ArgumentParser distance) {
 
     // we use a simple representation of a matrix
     // since it is only used for this purpose
+    // and resize space for the elements
     std::vector<std::vector<int>> distance_matrix;
+    distance_matrix.resize(names.size());
     for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
+        distance_matrix[i].resize(names.size());
+    }
+
+    // fill in the elements of the matrix
+    for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
+        if (i % 100 == 0) {
+            spdlog::info("Built {} out of {} rows of distance matrix.", i, names.size());
+        }
+
         for (std::vector<int>::size_type j = i; j < names.size(); j++) {
             int dist = breakpoint_magnitude(bp_profiles[names[i]] - bp_profiles[names[j]]);
-            std::cout << names[i] << "-" << names[j] << ":" << dist << std::endl;
+            distance_matrix[i][j] = dist;
+            distance_matrix[j][i] = dist;
         }
+    }
+
+    std::ofstream matrix_output(distance.get<std::string>("-o") + "_dist_matrix.csv", std::ios::out);
+    for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
+        if (i != 0) std::cout << ",";
+        matrix_output << names[i];
+    }
+    matrix_output << std::endl;
+
+    for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
+        matrix_output << names[i];
+        for (std::vector<int>::size_type j = 0; j < names.size(); j++) {
+            matrix_output << "," << distance_matrix[i][j];
+        }
+        matrix_output << std::endl;
     }
 }
 
@@ -223,6 +250,10 @@ int main(int argc, char *argv[])
 
     distance.add_argument("cn_profile")
         .help("copy number profile in CSV format");
+
+    distance.add_argument("-o", "--output")
+        .help("prefix of the output files")
+        .required();
 
     argparse::ArgumentParser nni(
         "nni"

@@ -84,20 +84,50 @@ namespace copynumber {
     }
 
     /*
-      Computes the breakpoint magnitude of a *chromosome and allele sorted*
-      chromosome breakpoint profile.
+      Computes the breakpoint magnitude of a *chromosome and allele
+      sorted* breakpoint profile.
      */
     int breakpoint_magnitude(const breakpoint_profile& p) {
+        if (p.bins.size() < 1) return 0;
+
+        std::string current_chrom = p.bins[0].chromosome;
+        std::string current_allele = p.bins[0].allele;
+        bool chrm_allele_changed = false;
+
+        int mag = 0;
         std::vector<int> pos_heap, neg_heap;
-        for (int v : p.profile) {
+        for (std::vector<int>::size_type i = 0; i < p.profile.size();) {
+            if (chrm_allele_changed) {
+                std::make_heap(pos_heap.begin(), pos_heap.end());
+                std::make_heap(neg_heap.begin(), neg_heap.end());
+
+                mag += breakpoint_magnitude(pos_heap) + breakpoint_magnitude(neg_heap);
+
+                chrm_allele_changed = false;
+                pos_heap.clear();
+                neg_heap.clear();
+
+                continue;
+            }
+
+            if (p.bins[i].chromosome != current_chrom || p.bins[i].allele != current_allele) {
+                chrm_allele_changed = true;
+                current_chrom = p.bins[i].chromosome;
+                current_allele = p.bins[i].allele;
+                continue;
+            }
+
+            int v = p.profile[i];
             if (v < 0) neg_heap.push_back(-v);
             if (v > 0) pos_heap.push_back(v);
+            i++;
         }
 
         std::make_heap(pos_heap.begin(), pos_heap.end());
         std::make_heap(neg_heap.begin(), neg_heap.end());
+        mag += breakpoint_magnitude(pos_heap) + breakpoint_magnitude(neg_heap);
 
-        return breakpoint_magnitude(pos_heap) + breakpoint_magnitude(neg_heap);
+        return mag;
     }
 
     breakpoint_profile convert_to_breakpoint_profile(const copynumber_profile &p, int diploid_cn);
