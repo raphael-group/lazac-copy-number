@@ -91,7 +91,7 @@ void do_distance(argparse::ArgumentParser distance) {
 
     std::ofstream matrix_output(distance.get<std::string>("-o") + "_dist_matrix.csv", std::ios::out);
     for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
-        if (i != 0) std::cout << ",";
+        if (i != 0) matrix_output << ",";
         matrix_output << names[i];
     }
     matrix_output << std::endl;
