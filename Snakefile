@@ -30,7 +30,7 @@ breaked_nni_instances = expand(
 )
 
 WCND_instances = expand(
-    "data/simulations/WCND/n{cells}_l{loci}_s{seed}_tree.newick",
+    "data/simulations/results/WCND/n{cells}_l{loci}_s{seed}_eval.txt",
     cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
 )
 
@@ -41,7 +41,7 @@ rule all:
         # breaked_nj_instances,
         # medicc2_instances,
         WCND_instances,
-        #breaked_nni_instances,
+        # breaked_nni_instances,
 
 rule breaked_nj_gundem:
     input:
@@ -74,9 +74,8 @@ rule WCND:
     benchmark:
         "data/simulations/WCND/n{ncells}_l{loci}_s{seed}.benchmark.txt"
     shell:
-        "python scripts/breaked.py -i {input.cn_profiles} -o "
+        "python scripts/WeightedCopyNumberDistanceFunctions.py -i {input.cn_profiles} -o "
         "data/simulations/WCND/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
-        
 
 rule nj:
     input:
@@ -90,20 +89,28 @@ rule nj:
         "python scripts/breaked.py {input.cn_profiles} --distance {wildcards.dist} --output "
         "data/simulations/{wildcards.dist}_nj/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
 
+rule breaked_nj_post_process:
+     input:
+        tree = "data/simulations/{dist}_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
+     output:
+        tree = "data/simulations/{dist}_nj/n{ncells}_l{loci}_s{seed}_tree.resolved.newick",
+     shell:
+        "python scripts/resolve_polytomies.py {input.tree} --output {output.tree}"
+        
 rule breaked_nni:
-    threads: 8
     resources:
         time = "00-06:00:00",
         mem_mb = 4000,
     input:
         cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles.csv",
-        breaked_nj_tree = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_tree.newick",
+        breaked_nj_tree = "data/simulations/breaked_nj/n{ncells}_l{loci}_s{seed}_tree.resolved.newick",
     output:
         breaked_nni_tree = "data/simulations/breaked_nni/n{ncells}_l{loci}_s{seed}_tree.newick",
     benchmark:
         "data/simulations/breaked_nni/n{ncells}_l{loci}_s{seed}.benchmark.txt"
     shell:
-        "python scripts/breaked_nni.py {input.cn_profiles} {input.breaked_nj_tree} --output {output.breaked_nni_tree} --num-threads 8"
+        "/n/fs/ragr-research/projects/breaked-copy-number/build/src/breaked nni {input.cn_profiles} {input.breaked_nj_tree}"
+        " --output data/simulations/breaked_nni/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed} -i 250 -a 1.5"
         
 rule medicc2:
     input:
@@ -160,6 +167,16 @@ rule medicc2_perf_compare:
         ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
     output:
         eval_file = "data/simulations/results/medicc2/n{ncells}_l{loci}_s{seed}_eval.txt"
+    shell:
+        "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
+        " -d rf qt tt -o {output.eval_file}"
+
+rule WCND_perf_compare:
+    input:
+        tree = "data/simulations/WCND/n{ncells}_l{loci}_s{seed}_tree.newick",
+        ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
+    output:
+        eval_file = "data/simulations/results/WCND/n{ncells}_l{loci}_s{seed}_eval.txt"
     shell:
         "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
         " -d rf qt tt -o {output.eval_file}"

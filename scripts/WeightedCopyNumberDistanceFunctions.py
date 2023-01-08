@@ -11,6 +11,9 @@ import sys
 import argparse
 import itertools
 
+from skbio import DistanceMatrix, TreeNode
+from skbio.tree import nj
+
 ###############
 # CND functions
 ###############
