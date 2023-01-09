@@ -106,6 +106,7 @@ if __name__ == "__main__":
             for (i, v) in enumerate(profile):
                 f.write(f"{sample_id},1,{i},{i},{int(v)}\n")
 
+    cn_profile_data = []
     with open(f"{args.output}_cn_profiles.csv", "w") as f:
         f.write("node,chrom,start,end,cn_a\n")
         for (node, profile) in cn_profiles.items():
@@ -114,7 +115,14 @@ if __name__ == "__main__":
             sample_id = node_renaming_dict[node]
             for (i, v) in enumerate(profile):
                 f.write(f"{sample_id},1,{i},{i},{int(v)}\n")
-
+                cn_profile_data.append([f'{sample_id}', '1', i, i, int(v)])
+    
+    df_cn_profile = pd.DataFrame(cn_profile_data, columns = ['node', 'chrom', 'start', 'end', 'cn_a'])
+    df_cn_profile_medalt = df_cn_profile.pivot(index=['start'], columns='node', values='cn_a').reset_index().rename(columns={'start': 'pos'})
+    df_cn_profile_medalt['chrom'] = '1'
+    df_cn_profile_medalt[['chrom'] + list(df_cn_profile_medalt.columns)[:-1]]
+    df_cn_profile_medalt.to_csv(f'{args.output}_cn_profiles_medalt.tsv', index=False, sep='\t')
+    
     with open(f"{args.output}_cn_profiles_medicc2.tsv", "w") as f:
         f.write("sample_id\tchrom\tstart\tend\tcn_a\n")
         for (node, profile) in cn_profiles.items():
