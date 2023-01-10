@@ -122,7 +122,11 @@ if __name__ == "__main__":
     df_cn_profile_medalt['chrom'] = '1'
     df_cn_profile_medalt = df_cn_profile_medalt[['chrom'] + list(df_cn_profile_medalt.columns)[:-1]]
     df_cn_profile_medalt.to_csv(f'{args.output}_cn_profiles_medalt.tsv', index=False, sep='\t')
-    
+
+    df_cn_profile_sitka = df_cn_profile_medalt.drop(['chrom'], axis=1)
+    df_cn_profile_sitka = df_cn_profile_sitka.set_index('pos')
+    df_cn_profile_sitka.to_csv(f'{args.output}_cn_profiles_sitka.csv')
+
     with open(f"{args.output}_cn_profiles_medicc2.tsv", "w") as f:
         f.write("sample_id\tchrom\tstart\tend\tcn_a\n")
         for (node, profile) in cn_profiles.items():
