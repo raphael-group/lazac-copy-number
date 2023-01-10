@@ -3,6 +3,10 @@ ncells = [100, 150, 200, 250, 300]
 nloci  = [1000, 2000, 3000, 4000]
 seeds  = [0, 1, 2, 3, 4, 5, 6]
 
+#ncells = [10]
+#nloci = [1000]
+#seeds = [0]
+
 simulation_instances = expand(
     "data/simulations/ground_truth/n{cells}_l{loci}_s{seed}_tree.newick", 
     cells=ncells, loci=nloci, seed=seeds
@@ -34,14 +38,23 @@ WCND_instances = expand(
     cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
 )
 
+python2_exec = '/n/fs/ragr-data/users/palash/anaconda3/envs/scarlet/bin/python2'
+
+MEDALT_instances = expand(
+    "data/simulations/MEDALT/n{cells}_l{loci}_s{seed}_tree.newick",
+    #"data/simulations/MEDALT/n{cells}_l{loci}_s{seed}/CNV.tree.txt",
+    cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
+)
 
 rule all:
     input:
+        #simulation_instances,
         # breaked_nj_instances_gundem
         # breaked_nj_instances,
         # medicc2_instances,
-        WCND_instances,
+        #WCND_instances,
         # breaked_nni_instances,
+        MEDALT_instances,
 
 rule breaked_nj_gundem:
     input:
@@ -58,12 +71,35 @@ rule conet_simulation:
     output:
         cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles.csv",
         medicc2_cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles_medicc2.tsv",
+        medalt_cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles_medalt.tsv",
+        sitka_cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles_sitka.csv",
         edgelist = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_edgelist.csv", 
         full_cn_profiles = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_full_cn_profiles.csv",
         tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
     shell:
         "python scripts/simulations.py -l {wildcards.loci} -n {wildcards.ncells} -s {wildcards.seed}"
         " --output data/simulations/ground_truth/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed}"
+
+rule MEDALT:
+    input:
+        cn_profiles = 'data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles_medalt.tsv',
+    output:
+        #tree = 'data/simulations/MEDALT/n{ncells}_l{loci}_s{seed}/CNV.tree.txt',
+        tree = 'data/simulations/MEDALT/n{ncells}_l{loci}_s{seed}_tree.newick',
+    params:
+        python2_exec = '/n/fs/ragr-data/users/palash/anaconda3/envs/scarlet/bin/python2',
+        medalt_path = '/n/fs/ragr-data/users/palash/MEDALT/',
+        output_path = './data/simulations/MEDALT/n{ncells}_l{loci}_s{seed}/',
+        prefix = 'data/simulations/MEDALT/n{ncells}_l{loci}_s{seed}'
+    log:
+        std = 'data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}.log',
+        err = 'data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}.err.log',
+    benchmark:
+        'data/simulations/MEDALT/n{ncells}_l{loci}_s{seed}.benchmark.txt',
+    shell:
+        'mkdir -p {params.output_path}; '
+        '{params.python2_exec} {params.medalt_path}/scTree.py  -P {params.medalt_path} -I ./{input.cn_profiles} -D D -G hg19 -O {params.output_path} 1> {log.std} 2> {log.err}; '
+        'python scripts/postprocess_medalt.py -i {params.output_path}/CNV.tree.txt -o {params.prefix}'
 
 rule WCND:
     input:
