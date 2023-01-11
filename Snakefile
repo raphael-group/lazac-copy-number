@@ -42,7 +42,11 @@ python2_exec = '/n/fs/ragr-data/users/palash/anaconda3/envs/scarlet/bin/python2'
 
 MEDALT_instances = expand(
     "data/simulations/MEDALT/n{cells}_l{loci}_s{seed}_tree.newick",
-    #"data/simulations/MEDALT/n{cells}_l{loci}_s{seed}/CNV.tree.txt",
+    cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
+)
+
+MEDALT_results_instances = expand(
+    "data/simulations/results/MEDALT/n{cells}_l{loci}_s{seed}_eval.txt",
     cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
 )
 
@@ -54,7 +58,7 @@ rule all:
         # medicc2_instances,
         #WCND_instances,
         # breaked_nni_instances,
-        MEDALT_instances,
+        MEDALT_results_instances,
 
 rule breaked_nj_gundem:
     input:
@@ -213,6 +217,16 @@ rule WCND_perf_compare:
         ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
     output:
         eval_file = "data/simulations/results/WCND/n{ncells}_l{loci}_s{seed}_eval.txt"
+    shell:
+        "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
+        " -d rf qt tt -o {output.eval_file}"
+
+rule MEDALT_perf_compare:
+    input:
+        tree = "data/simulations/MEDALT/n{ncells}_l{loci}_s{seed}_tree.newick",
+        ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
+    output:
+        eval_file = "data/simulations/results/MEDALT/n{ncells}_l{loci}_s{seed}_eval.txt"
     shell:
         "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
         " -d rf qt tt -o {output.eval_file}"

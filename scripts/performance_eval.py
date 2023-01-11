@@ -11,7 +11,7 @@ from tqdm import tqdm
 from collections import defaultdict, deque
 
 
-ALGORITHMS = ['breaked_nj', 'hamming_nj', 'rectilinear_nj', 'medicc2', 'breaked_nni']
+ALGORITHMS = ['breaked_nj', 'hamming_nj', 'rectilinear_nj', 'medicc2', 'breaked_nni', 'WCND', 'MEDALT']
 
 def read_tree_distances(results_file):
     with open(results_file, 'r') as f:

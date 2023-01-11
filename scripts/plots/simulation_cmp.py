@@ -53,7 +53,7 @@ if __name__ == "__main__":
     plt.show()
 
     fig, ax = plt.subplots(figsize=(4, 4.5))
-    timing_results_df = results[results['algorithm'].isin(['breaked_nj', 'breaked_nni', 'medicc2'])].copy()
+    timing_results_df = results[results['algorithm'].isin(['breaked_nj', 'breaked_nni', 'medicc2', 'WCND', 'MEDALT'])].copy()
     timing_results_df = timing_results_df[
         (timing_results_df['nloci'] == 4000) & (timing_results_df['ncells'] <= 150)
     ]
