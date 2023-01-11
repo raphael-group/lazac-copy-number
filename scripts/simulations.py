@@ -125,7 +125,13 @@ if __name__ == "__main__":
 
     df_cn_profile_sitka = df_cn_profile_medalt.drop(['chrom'], axis=1)
     df_cn_profile_sitka = df_cn_profile_sitka.set_index('pos')
-    df_cn_profile_sitka.to_csv(f'{args.output}_cn_profiles_sitka.csv')
+    df_cn_profile_sitka.index.name = None
+    df_cn_profile_sitka = df_cn_profile_sitka.rename(index = {x: f'1_{x*500000 + 1}_{x*500000 + 500000}' for x in range(len(df_cn_profile_sitka))})
+    with open(f'{args.output}_cn_profiles_sitka.csv', 'w') as out:
+        out.write(','.join(list(df_cn_profile_sitka.columns)) + '\n')
+        for row_idx, row in df_cn_profile_sitka.iterrows():
+            out.write(','.join(map(str, [row_idx] + list(row.values))) + '\n')
+    #df_cn_profile_sitka.to_csv(f'{args.output}_cn_profiles_sitka.csv')
 
     with open(f"{args.output}_cn_profiles_medicc2.tsv", "w") as f:
         f.write("sample_id\tchrom\tstart\tend\tcn_a\n")
@@ -145,8 +151,8 @@ if __name__ == "__main__":
         for (src, dst) in tree.edges:
             f.write(f"{src},{dst}\n")
     
-    plt.figure(3, figsize=(12, 12))
-    pos = graphviz_layout(tree, prog="dot")
-    nx.draw(tree, pos=pos, with_labels=True, node_color="grey", node_size=60, verticalalignment="bottom",
-            font_size=20, edge_color="grey", font_color="green")
-    plt.savefig(f"{args.output}_tree.pdf")
+    #plt.figure(3, figsize=(12, 12))
+    #pos = graphviz_layout(tree, prog="dot")
+    #nx.draw(tree, pos=pos, with_labels=True, node_color="grey", node_size=60, verticalalignment="bottom",
+    #        font_size=20, edge_color="grey", font_color="green")
+    #plt.savefig(f"{args.output}_tree.pdf")
