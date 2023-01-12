@@ -3,9 +3,9 @@ ncells = [100, 150, 200, 250, 300]
 nloci  = [1000, 2000, 3000, 4000]
 seeds  = [0, 1, 2, 3, 4, 5, 6]
 
-#ncells = [10]
-#nloci = [1000]
-#seeds = [0]
+ncells = [100]
+nloci = [1000]
+seeds = [0]
 
 simulation_instances = expand(
     "data/simulations/ground_truth/n{cells}_l{loci}_s{seed}_tree.newick", 
@@ -45,6 +45,12 @@ MEDALT_instances = expand(
     cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
 )
 
+sitka_instances = expand(
+    #"data/simulations/sitka/n{cells}_l{loci}_s{seed}/tree.newick",
+    "data/simulations/sitka/n{cells}_l{loci}_s{seed}_tree.newick",
+    cells=ncells, loci=nloci, seed=seeds
+)
+
 MEDALT_results_instances = expand(
     "data/simulations/results/MEDALT/n{cells}_l{loci}_s{seed}_eval.txt",
     cells=[100, 150, 200, 250, 300], loci=nloci, seed=seeds
@@ -58,7 +64,8 @@ rule all:
         # medicc2_instances,
         #WCND_instances,
         # breaked_nni_instances,
-        MEDALT_results_instances,
+        #MEDALT_results_instances,
+        sitka_instances
 
 rule breaked_nj_gundem:
     input:
@@ -104,6 +111,29 @@ rule MEDALT:
         'mkdir -p {params.output_path}; '
         '{params.python2_exec} {params.medalt_path}/scTree.py  -P {params.medalt_path} -I ./{input.cn_profiles} -D D -G hg19 -O {params.output_path} 1> {log.std} 2> {log.err}; '
         'python scripts/postprocess_medalt.py -i {params.output_path}/CNV.tree.txt -o {params.prefix}'
+
+rule sitka:
+    input:
+        cn_profiles = 'data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_cn_profiles_sitka.csv',
+    output:
+        #tree = 'data/simulations/sitka/n{ncells}_l{loci}_s{seed}/tree.newick',
+        tree = 'data/simulations/sitka/n{ncells}_l{loci}_s{seed}_tree.newick',
+    params:
+        breakpoint_file = 'n{ncells}_l{loci}_s{seed}_breakpoint_matrix.csv',
+        sitka_bin = '/n/fs/ragr-data/users/palash/sitkatree/sitka/build/install/nowellpack/bin',
+        output_dir = 'data/simulations/sitka/n{ncells}_l{loci}_s{seed}',
+    shell:
+        'mkdir -p {params.output_dir}; '
+        'Rscript scripts/cntob.R -i {input.cn_profiles} -o {params.output_dir}/{params.breakpoint_file}; '
+        'cd {params.output_dir};'
+        '{params.sitka_bin}/corrupt-infer-with-noisy-params --model.globalParameterization true --model.binaryMatrix {params.breakpoint_file} --model.fprBound 0.1 --model.fnrBound 0.5  --engine PT --engine.initialization FORWARD --engine.nScans 1000 --engine.nPassesPerScan 1 --engine.nChains 1;'
+        'cp results/latest/samples/phylo.csv .;'
+        '{params.sitka_bin}/corrupt-average --csvFile phylo.csv --logisticTransform false;'
+        'cp results/latest/average.csv .;'
+        '{params.sitka_bin}/corrupt-greedy --tipInclusionProbabilities ReadOnlyCLMatrix average.csv;'
+        'cp results/latest/tree.newick .;'
+        'cd ../../../../;'
+        'python scripts/postprocess_sitka.py -i {params.output_dir}/tree.newick -o {output.tree};'
 
 rule WCND:
     input:
