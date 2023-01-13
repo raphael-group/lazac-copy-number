@@ -69,7 +69,7 @@ if __name__ == "__main__":
     for (n1, p1) in tqdm(cnp_profiles.items()):
         for (n2, p2) in cnp_profiles.items():
             if args.distance == "breaked":
-                pairwise_distances.loc[n1, n2] = p1.breakpoints(args.normal).distance(p2.breakpoints(args.normal))
+                pairwise_distances.loc[n1, n2] = p1.breakpoints(args.normal).rectilinear_distance(p2.breakpoints(args.normal))
             elif args.distance == "breaked-wgd":
                 dists = []
                 for wgd1 in [0, 1, 2, 4, 5]:

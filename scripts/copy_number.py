@@ -115,6 +115,9 @@ class ChromosomeBreakpointProfile:
 
         return distance
 
+    def rectilinear_distance(self, cbp):
+        return 0.5 * np.sum(np.abs(self.profile - cbp.profile))
+
 @dataclass(frozen=True)
 class BreakpointProfile:
     """Whole-genome breakpoint profile"""
@@ -128,6 +131,14 @@ class BreakpointProfile:
             distance += cbp1.distance(cbp2)
         return distance
 
+    def rectilinear_distance(self, cbp):
+        assert type(cbp) is type(self)
+        assert len(self.profiles) == len(cbp.profiles)
+        distance = 0
+        for cbp1, cbp2 in zip(self.profiles, cbp.profiles):
+            distance += cbp1.rectilinear_distance(cbp2)
+        return distance
+
 @dataclass(frozen=True)
 class ChromosomeCopyNumberProfile:
     """Copy number profile for a single chromosome"""
@@ -137,8 +148,8 @@ class ChromosomeCopyNumberProfile:
 
     def breakpoints(self, normal=2) -> ChromosomeBreakpointProfile:
         synthetic_gene = np.ones((self.profile.shape[0], 1)) * normal
-        breakpoint_profile = np.hstack((synthetic_gene, self.profile))
-        breakpoint_profile = self.profile - breakpoint_profile[:, :-1] 
+        breakpoint_profile = np.hstack((synthetic_gene, self.profile, synthetic_gene))
+        breakpoint_profile = breakpoint_profile[:, 1:] - breakpoint_profile[:, :-1] 
         return ChromosomeBreakpointProfile(
             self.bins, breakpoint_profile, self.chromosome
         )
