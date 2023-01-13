@@ -3,10 +3,6 @@ ncells = [100, 150, 200, 250, 300]
 nloci  = [1000, 2000, 3000, 4000]
 seeds  = [0, 1, 2, 3, 4, 5, 6]
 
-ncells = [100]
-nloci = [1000]
-seeds = [0]
-
 simulation_instances = expand(
     "data/simulations/ground_truth/n{cells}_l{loci}_s{seed}_tree.newick", 
     cells=ncells, loci=nloci, seed=seeds
@@ -46,8 +42,12 @@ MEDALT_instances = expand(
 )
 
 sitka_instances = expand(
-    #"data/simulations/sitka/n{cells}_l{loci}_s{seed}/tree.newick",
     "data/simulations/sitka/n{cells}_l{loci}_s{seed}_tree.newick",
+    cells=ncells, loci=nloci, seed=seeds
+)
+
+sitka_results_instances = expand(
+    "data/simulations/results/sitka/n{cells}_l{loci}_s{seed}_eval.txt",
     cells=ncells, loci=nloci, seed=seeds
 )
 
@@ -65,7 +65,7 @@ rule all:
         #WCND_instances,
         # breaked_nni_instances,
         #MEDALT_results_instances,
-        sitka_instances
+        sitka_results_instances
 
 rule breaked_nj_gundem:
     input:
@@ -122,6 +122,8 @@ rule sitka:
         breakpoint_file = 'n{ncells}_l{loci}_s{seed}_breakpoint_matrix.csv',
         sitka_bin = '/n/fs/ragr-data/users/palash/sitkatree/sitka/build/install/nowellpack/bin',
         output_dir = 'data/simulations/sitka/n{ncells}_l{loci}_s{seed}',
+    benchmark:
+        'data/simulations/sitka/n{ncells}_l{loci}_s{seed}.benchmark.txt',
     shell:
         'mkdir -p {params.output_dir}; '
         'Rscript scripts/cntob.R -i {input.cn_profiles} -o {params.output_dir}/{params.breakpoint_file}; '
@@ -180,7 +182,7 @@ rule breaked_nni:
         "data/simulations/breaked_nni/n{ncells}_l{loci}_s{seed}.benchmark.txt"
     shell:
         "/n/fs/ragr-research/projects/breaked-copy-number/build/src/breaked nni {input.cn_profiles} {input.breaked_nj_tree}"
-        " --output data/simulations/breaked_nni/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed} -i 250 -a 1.5"
+        " --output data/simulations/breaked_nni/n{wildcards.ncells}_l{wildcards.loci}_s{wildcards.seed} -i 400 -a 2"
         
 rule medicc2:
     input:
@@ -257,6 +259,16 @@ rule MEDALT_perf_compare:
         ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
     output:
         eval_file = "data/simulations/results/MEDALT/n{ncells}_l{loci}_s{seed}_eval.txt"
+    shell:
+        "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
+        " -d rf qt tt -o {output.eval_file}"
+
+rule sitka_perf_compare:
+    input:
+        tree = "data/simulations/sitka/n{ncells}_l{loci}_s{seed}_tree.newick",
+        ground_truth_tree = "data/simulations/ground_truth/n{ncells}_l{loci}_s{seed}_tree.newick"
+    output:
+        eval_file = "data/simulations/results/sitka/n{ncells}_l{loci}_s{seed}_eval.txt"
     shell:
         "java -jar /n/fs/ragr-data/users/palash/TreeCmp_v2.0-b76/bin/treeCmp.jar -N -P -r {input.ground_truth_tree} -i {input.tree} "
         " -d rf qt tt -o {output.eval_file}"

@@ -197,7 +197,8 @@ void do_nni(argparse::ArgumentParser nni) {
         int candidate_tree_idx = distrib(gen);
 
         digraph<rectilinear_vertex_data> candidate_tree = candidate_trees[candidate_tree_idx];
-        stochastic_nni(candidate_tree, gen, nni.get<double>("-a"));
+        std::uniform_real_distribution<double> aggression_distrib(0, nni.get<double>("-a"));
+        stochastic_nni(candidate_tree, gen, aggression_distrib(gen));
 
         digraph<rectilinear_vertex_data> updated_tree = hill_climb(candidate_tree);
         if (updated_tree[0].data.score < candidate_trees[0][0].data.score) {
@@ -288,7 +289,15 @@ int main(int argc, char *argv[])
         program.parse_args(argc, argv);
     } catch (const std::runtime_error& err) {
         std::cerr << err.what() << std::endl;
-        std::cerr << program;
+
+        if (program.is_subcommand_used(nni)) {
+            std::cerr << nni;
+        } else if (program.is_subcommand_used(distance)) {
+            std::cerr << distance;
+        } else {
+            std::cerr << program;
+        }
+
         std::exit(1);
     }
 
@@ -296,6 +305,8 @@ int main(int argc, char *argv[])
         do_nni(nni);
     } else if (program.is_subcommand_used(distance)) {
         do_distance(distance);
+    } else {
+        std::cerr << program;
     }
 
     return 0;
