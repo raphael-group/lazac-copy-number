@@ -200,7 +200,7 @@ void do_nni(argparse::ArgumentParser nni) {
         std::uniform_real_distribution<double> aggression_distrib(0, nni.get<double>("-a"));
         stochastic_nni(candidate_tree, gen, aggression_distrib(gen));
 
-        digraph<rectilinear_vertex_data> updated_tree = hill_climb(candidate_tree);
+        digraph<rectilinear_vertex_data> updated_tree = hill_climb(candidate_tree, gen, nni.get<bool>("-g"));
         if (updated_tree[0].data.score < candidate_trees[0][0].data.score) {
             candidate_trees[0] = updated_tree;
             spdlog::info("Updated candidate tree set.");
@@ -281,6 +281,11 @@ int main(int argc, char *argv[])
         .help("number of iterations to perform without improvement before stopping")
         .default_value(100)
         .scan<'d', int>();
+
+    nni.add_argument("-g", "--greedy")
+        .help("use greedy hill climbing strategy as opposed to full NNI neighborhood exploration")
+        .default_value(false)
+        .implicit_value(true);
 
     program.add_subparser(nni);
     program.add_subparser(distance);

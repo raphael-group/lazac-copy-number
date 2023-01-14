@@ -1,6 +1,7 @@
 #include "copy_number.hpp"
 #include "vec_utilities.hpp"
 
+#include <set>
 #include <random>
 #include <vector>
 #include <map>
@@ -270,16 +271,17 @@ namespace copynumber {
       Requires:
         - t satisfies the *rectilinear invariant*.
      */
-    std::optional<std::tuple<int, int, int, int>> greedy_nni(digraph<rectilinear_vertex_data> &t) {
-        std::vector<std::pair<int, int>> internal_edges;
-        for (auto [u, v] : t.edges()) {
-            if (t.successors(v).empty()) continue;
-            internal_edges.push_back(std::make_pair(u, v));
-        }
-
-        int best_score = std::numeric_limits<int>::max(); // i.e. best_score = \infty
+    std::optional<std::tuple<int, int, int, int>> greedy_nni(digraph<rectilinear_vertex_data> &t, 
+                                                             const std::map<int, std::pair<int, int>> &indexed_edges,
+                                                             const std::vector<int> &edge_indices,
+                                                             bool greedy) {
+        int best_score = t[0].data.score; // i.e. best_score = \infty
         std::optional<std::tuple<int, int, int, int>> best_move;
-        for (auto [u, v] : internal_edges) {
+        for (int idx : edge_indices) {
+            const auto& [u, v] = indexed_edges.at(idx);
+
+            if (t.successors(v).empty()) continue; // i.e if not internal
+
             std::vector<int> u_children;
             std::vector<int> v_children;
 
@@ -293,6 +295,7 @@ namespace copynumber {
                 v_children.push_back(w);
             }
 
+
             for (auto w : u_children) {
                 for (auto z : v_children) {
                     nni(t, u, w, v, z);
@@ -303,10 +306,17 @@ namespace copynumber {
                     if (score < best_score) {
                         best_score = score;
                         best_move = std::make_tuple(u, w, v, z);
+
+                        if (greedy) {
+                            undo_nni(t, u, w, v, z);
+                            unvisit(t, 0, v);
+                            return best_move;
+                        }
                     }
 
                     undo_nni(t, u, w, v, z);
                     unvisit(t, 0, v);
+
                 }
             }
         }
@@ -314,15 +324,39 @@ namespace copynumber {
         return best_move;
     }
 
-    digraph<rectilinear_vertex_data> hill_climb(digraph<rectilinear_vertex_data> t) {
+    digraph<rectilinear_vertex_data> hill_climb(digraph<rectilinear_vertex_data> t, std::ranlux48_base& gen, bool greedy) {
+        std::map<int, std::pair<int, int>> index_to_edges;
+        std::map<std::pair<int, int>, int> edges_to_index;
+        std::vector<int> random_indices;
+        
+        int idx = 0;
+        for (const auto &p : t.edges()) {
+            index_to_edges[idx] = p;
+            edges_to_index[p] = idx;
+            random_indices.push_back(idx);
+            idx++;
+        }
+            
+        std::shuffle(random_indices.begin(), random_indices.end(), gen);
+
         int current_score = t[0].data.score;
         int iterations = 0;
         for (; true; iterations++) {
-            auto best_move = greedy_nni(t);
+            auto best_move = greedy_nni(t, index_to_edges, random_indices, greedy);
             if (!best_move) break;
 
             auto [u, w, v, z] = *best_move;
             nni(t, u, w, v, z);
+
+            // update edge map by deleting (u, w) and (v, z) and adding
+            // (v, w) and (u, z)
+            int i1 = edges_to_index[std::make_pair(u, w)];
+            int i2 = edges_to_index[std::make_pair(v, z)];
+            index_to_edges[i1] = std::make_pair(v, w);
+            edges_to_index[std::make_pair(v, w)] = i1;
+            index_to_edges[i2] = std::make_pair(u, z);
+            edges_to_index[std::make_pair(u, z)] = i2;
+
             unvisit(t, 0, v);
             small_rectilinear(t, 0);
             int new_score = t[0].data.score;

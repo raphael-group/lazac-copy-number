@@ -157,7 +157,19 @@ namespace copynumber {
       Assumes the root is the 0 vertex.
     */
     digraph<rectilinear_vertex_data> stochastic_nni(const digraph<rectilinear_vertex_data>& t, std::ranlux48_base& gen, float aggression);
-    digraph<rectilinear_vertex_data> hill_climb(digraph<rectilinear_vertex_data> t);
+
+
+    /*
+    * Performs hill climbing on the rectilinear score of the input tree until no
+    * more improvement is found.
+    *
+    * Parameters
+    *    - t: input tree does not need to satisfy rectilinear invariant.
+    *    - greedy: if true, selects the first improvement at every iteration. otherwise, 
+    *      explores entire NNI neighborhood for improvement at every iteration.
+    *    - gen: random generator to shuffle edges for random exploration.
+    */
+    digraph<rectilinear_vertex_data> hill_climb(digraph<rectilinear_vertex_data> t, std::ranlux48_base& gen, bool greedy);
 
     /*
       Computes the breakpoint magnitude of a *chromosome and allele sorted*
