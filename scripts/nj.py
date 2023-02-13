@@ -15,7 +15,7 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--output", help="Output tree."
+        "--output", help="Output tree.", required=True
     )
 
     return parser.parse_args()
