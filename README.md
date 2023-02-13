@@ -23,7 +23,7 @@ To build `Breaked`, execute the following sequence of commands:
 ```
 $ mkdir build; cd build
 $ cmake ..
-# make
+$ make
 ```
 The output binary will be located at `build/src/breaked`.
 
@@ -86,5 +86,5 @@ Finally, we will run `breaked nni` to improve upon the candidate
 topology.
 
 ```
-breaked nni examples/PTX008_cn_profile.csv examples/PTX008_rcnt_nj_tree.binary.newick -a 2 -o ../examples/PTX008_rcnt_tree.binary.newick
+breaked nni examples/PTX008_cn_profile.csv examples/PTX008_rcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_rcnt_tree
 ```
