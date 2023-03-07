@@ -115,7 +115,7 @@ void do_nni(argparse::ArgumentParser nni) {
     buffer << in.rdbuf();
     std::string seed_tree_newick = buffer.str();
 
-    digraph<std::string> t = treeio::read_newick_node(seed_tree_newick);
+    digraph<treeio::newick_vertex_data> t = treeio::read_newick_node(seed_tree_newick);
 
     std::map<std::string, copynumber_profile> cn_profiles = read_cn_profiles(nni.get<std::string>("cn_profile"));
     std::map<std::string, breakpoint_profile> bp_profiles;
@@ -131,14 +131,14 @@ void do_nni(argparse::ArgumentParser nni) {
         breakpoint_vertex_data d;
         rectilinear_vertex_data r;
 
-        const auto &name = t[u];
-        d.name = name.data;
-        r.name = name.data;
+        const auto& vertex_data = t[u];
+        d.name = vertex_data.data.name;
+        r.name = vertex_data.data.name;
 
-        if (name.data != "") {
-            d.breakpoint_profile = bp_profiles[name.data].profile;
-            r.start = bp_profiles[name.data].profile;
-            r.end = bp_profiles[name.data].profile;
+        if (t.out_degree(u) == 0) {
+            d.breakpoint_profile = bp_profiles[d.name].profile;
+            r.start = bp_profiles[d.name].profile;
+            r.end = bp_profiles[d.name].profile;
         } 
 
         breakpoint_tree.add_vertex(d);

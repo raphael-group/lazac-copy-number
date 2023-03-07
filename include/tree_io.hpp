@@ -1,6 +1,7 @@
 #ifndef _TREE_IO_H
 #define _TREE_IO_H
 
+#include <iostream>
 #include <variant>
 #include <string>
 #include <stdexcept>
@@ -19,6 +20,11 @@ namespace treeio {
         COMMA,
         COLON,
         SEMICOLON
+    };
+
+    struct newick_vertex_data {
+        std::string name;
+        std::optional<float> in_branch_length;
     };
 
     typedef std::string name;
@@ -45,7 +51,7 @@ namespace treeio {
          Length -> empty | ":" number
 
     */
-    digraph<std::string> read_newick_node(const std::string &newick);
+    digraph<newick_vertex_data> read_newick_node(const std::string &newick);
 
     /*
       Requires: 
