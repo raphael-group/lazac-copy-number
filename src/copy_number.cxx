@@ -1,6 +1,7 @@
 #include "copy_number.hpp"
 #include "vec_utilities.hpp"
 
+#include <cstdlib>
 #include <set>
 #include <random>
 #include <vector>
@@ -96,7 +97,7 @@ namespace copynumber {
         std::vector<int> start(u_start.size());
         std::vector<int> end(u_end.size());
         int distance = 0;
-        for (int i = 0; i < u_start.size(); i++) {
+        for (size_t i = 0; i < u_start.size(); i++) {
             std::optional<std::pair<int, int>> interval = overlap(u_start[i], u_end[i], v_start[i], v_end[i]);
 
             if (interval) {
@@ -117,6 +118,73 @@ namespace copynumber {
         }
 
         return std::make_tuple(start, end, distance);
+    }
+
+
+    /*
+      Returns the optimal labeling of the child given the parent
+      labeling and the set of optimal labelings for the child.
+     */
+    std::vector<int> local_labeling(const std::vector<int>& parent_labeling,
+                                    const std::vector<int>& child_start,
+                                    const std::vector<int>& child_end) {
+        std::vector<int> child_labeling(parent_labeling.size());
+        for (size_t i = 0; i < child_labeling.size(); i++) {
+            // parent labeling overlaps with optimal child labelings
+            if (child_start[i] <= parent_labeling[i] && parent_labeling[i] <= child_end[i]) {
+                child_labeling[i] = parent_labeling[i];
+            } else {
+                int dist1 = abs(parent_labeling[i] - child_start[i]);
+                int dist2 = abs(parent_labeling[i] - child_end[i]);
+                if (dist1 < dist2) {
+                    child_labeling[i] = child_start[i];
+                } else {
+                    child_labeling[i] = child_end[i];
+                }
+            }
+        }
+
+        return child_labeling;
+    }
+
+    digraph<breakpoint_profile_vertex_data> ancestral_labeling(digraph<rectilinear_vertex_data>& t,
+                                                               int root,
+                                                               std::vector<genomic_bin> bins) {
+        std::stack<std::tuple<int, int>> callstack;
+        digraph<breakpoint_profile_vertex_data> bt;
+
+        callstack.push(std::make_tuple(root, -1));
+        while (!callstack.empty()) {
+            auto [node, parent] = callstack.top();
+            callstack.pop();
+
+            breakpoint_profile_vertex_data d;
+            d.name = t[node].data.name; // copy node name
+
+            if (parent == -1) {
+                breakpoint_profile p;
+                p.bins = bins;
+                p.profile = t[node].data.start.value();
+                d.profile = p;
+            } else {
+                breakpoint_profile p;
+                p.bins = bins;
+                p.profile = local_labeling(bt[parent].data.profile.profile, t[node].data.start.value(), t[node].data.end.value());
+                d.profile = p;
+                d.in_branch_length = breakpoint_magnitude(p - bt[parent].data.profile);
+            }
+
+            int new_node = bt.add_vertex(d);
+            if (parent != -1) {
+                bt.add_edge(parent, new_node);
+            }
+
+            for (const auto& child : t.successors(node)) {
+                callstack.push(std::make_tuple(child, new_node));
+            }
+        }
+
+        return bt;
     }
 
     void small_rectilinear(digraph<rectilinear_vertex_data>& t, int root) {

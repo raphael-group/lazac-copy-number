@@ -104,6 +104,12 @@ namespace copynumber {
         bool visited = false;
     };
 
+    struct breakpoint_profile_vertex_data {
+        std::string name;
+        breakpoint_profile profile;
+        std::optional<int> in_branch_length;
+    };
+
     /*
       Creates a breakpoint profile from a copy number profile
       where each chromosome and allele pair is considered seperately
@@ -130,6 +136,19 @@ namespace copynumber {
         - t satisfies the *rectilinear invariant*.
     */
     void small_rectilinear(digraph<rectilinear_vertex_data>& t, int root);
+
+    /*
+      Computes the (delta profile) ancestral labeling for a tree.
+
+      Requires:
+        - t satisfies the *rectilinear invariant*. 
+        - has visited == true for all vertices in t
+        - bins is a *chromosome and allele sorted* set of bins for a breakpoint profile
+     */
+    digraph<breakpoint_profile_vertex_data> ancestral_labeling(digraph<rectilinear_vertex_data>& t,
+                                                               int root,
+                                                               std::vector<genomic_bin> bins);
+        
 
     /*
       Performs (or undos) a NNI operation on edges (u, w) and (v, z) by

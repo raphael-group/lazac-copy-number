@@ -119,9 +119,11 @@ void do_nni(argparse::ArgumentParser nni) {
 
     std::map<std::string, copynumber_profile> cn_profiles = read_cn_profiles(nni.get<std::string>("cn_profile"));
     std::map<std::string, breakpoint_profile> bp_profiles;
+    std::vector<genomic_bin> sorted_bins;
     for (const auto &[name, cn_profile] : cn_profiles) {
         auto bp_profile = convert_to_breakpoint_profile(cn_profile, 2);
         bp_profiles[name] = bp_profile;
+        sorted_bins = bp_profile.bins;
     }
 
     /* Creates rectilinear vertex data */
@@ -220,7 +222,8 @@ void do_nni(argparse::ArgumentParser nni) {
                   return a[0].data.score > b[0].data.score;
               });
 
-    std::string newick_string = treeio::print_newick_tree(candidate_trees[candidate_trees.size() - 1]);
+    auto final_tree = ancestral_labeling(candidate_trees[candidate_trees.size() - 1], 0, sorted_bins);
+    std::string newick_string = treeio::print_newick_tree(final_tree);
     newick_string += ";";
 
     std::ofstream newick_output(nni.get<std::string>("-o") + "_tree.newick", std::ios::out);

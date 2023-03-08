@@ -59,7 +59,15 @@ namespace treeio {
      */
     template<class T>
     std::string print_newick_tree(const digraph<T> &tree, int root) {
-        if (tree.out_degree(root) == 0) return tree[root].data.name;
+        if (tree.out_degree(root) == 0) {
+            std::string newick = tree[root].data.name;
+
+            if (tree[root].data.in_branch_length.has_value()) {
+                newick += ":" + std::to_string(tree[root].data.in_branch_length.value());
+            }
+
+            return newick;
+        }
 
         std::string newick("(");
         int counter = 0;
@@ -71,6 +79,9 @@ namespace treeio {
 
         newick += ")";
         newick += tree[root].data.name;
+        if (tree[root].data.in_branch_length.has_value()) {
+            newick += ":" + std::to_string(tree[root].data.in_branch_length.value());
+        }
         return newick;
     }
 
