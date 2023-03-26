@@ -5,6 +5,7 @@ from Bio import Phylo
 import numpy as np
 import random
 from tqdm import tqdm
+import scipy.sparse as sp
 
 import argparse
 import gurobipy as gp
@@ -17,7 +18,10 @@ def is_leaf(T, node):
 Solves the ZCNT small parsimony problem for a 
 single chromosome and allele.
 """
-def zcnt_small_parsimony(Q, tree_edges, n, m, k, env=None, integral=False, balancing=True):
+def zcnt_small_parsimony(Qs, tree_edges, k, env=None, integral=False, balancing=True):
+    Q = np.hstack(Qs)
+    n, m = Q.shape
+
     if env:
         model = Model("ZCNT small parsimony", env=env)
     else:
@@ -35,12 +39,17 @@ def zcnt_small_parsimony(Q, tree_edges, n, m, k, env=None, integral=False, balan
 
     if balancing:
         for i in range(k):
-            model.addConstr(quicksum(l[i, j] for j in range(m)) == 0, name=f"constraint_1_{i}")
+            offset = 0
+            # ensure each of the chromosome allele pairs is balanced
+            for q in Qs:
+                qm = q.shape[1]
+                model.addConstr(quicksum(l[i, offset + j] for j in range(qm)) == 0, name=f"constraint_1_{i}")
+                offset += qm
 
     for i in range(n):
         for j in range(m):
             model.addConstr(l[i, j] == Q[i, j], name=f"constraint_2_{i}_{j}")
-
+    
     for i, j in tree_edges:
         for l_index in range(m):
             model.addConstr(l[i, l_index] - x_plus[i, j, l_index] <= 0, name=f"constraint_3_{i}_{j}_{l_index}")
@@ -48,6 +57,7 @@ def zcnt_small_parsimony(Q, tree_edges, n, m, k, env=None, integral=False, balan
             model.addConstr(x_minus[i, j, l_index] - l[j, l_index] <= 0, name=f"constraint_5_{i}_{j}_{l_index}")
             model.addConstr(x_minus[i, j, l_index] - l[i, l_index] <= 0, name=f"constraint_6_{i}_{j}_{l_index}")
 
+    model.setParam('NumericFocus', 3)
     model.optimize()
 
     l_solution = {(i, j): l[i, j].X for i in range(n) for j in range(m)}
@@ -57,7 +67,7 @@ def zcnt_small_parsimony(Q, tree_edges, n, m, k, env=None, integral=False, balan
     return model.objVal, l_solution
 
 def zcnt_small_parsimony_all(tree, cnp_profiles, env, integral=False, balancing=True):
-    parsimony_score = 0
+    Qs = []
     for allele in ['cn_a', 'cn_b']:
         for chrom in cnp_profiles['chrom'].unique():
             cn_matrix, _, _ = cnp_profiles_to_cn_matrix(cnp_profiles, chrom, allele)
@@ -65,11 +75,10 @@ def zcnt_small_parsimony_all(tree, cnp_profiles, env, integral=False, balancing=
             synthetic_gene = np.ones((cn_matrix.shape[0], 1))
             Q = np.hstack((synthetic_gene, cn_matrix, synthetic_gene))
             Q = Q[:, 1:] - Q[:, :-1] 
+            Qs.append(Q)
 
-            obj, l = zcnt_small_parsimony(Q, tree.edges, Q.shape[0], Q.shape[1], len(tree.nodes), env=env, integral=integral, balancing=balancing)
-            parsimony_score += obj
-
-    return parsimony_score
+    obj, _ = zcnt_small_parsimony(Qs, tree.edges, len(tree.nodes), env=env, integral=integral, balancing=balancing)
+    return obj
 
 def tree_to_newick(T, root=None):
     if root is None:
@@ -209,10 +218,10 @@ if __name__ == "__main__":
 
     rows = []
     with gp.Env(empty=True) as env:
-        env.setParam('OutputFlag', 0)
+        # env.setParam('OutputFlag', 0)
         env.start()
 
-        for it in tqdm(range(10)):
+        for it in tqdm(range(1)):
             score_no_balancing = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, balancing=False, integral=True)
             score_no_integrality = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, integral=False)
             score_integrality = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, integral=True, balancing=True)
