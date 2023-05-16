@@ -46,14 +46,14 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          mv artifacts/lazac-ubuntu-20.04/lazac artifacts/lazac-ubuntu-20.04
-          mv artifacts/lazac-macos-11/lazac artifacts/lazac-macos-11
+          mv artifacts/lazac-ubuntu-20.04/lazac artifacts/lazac-ubuntu
+          mv artifacts/lazac-macos-11/lazac artifacts/lazac-macos
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/lazac-ubuntu-20.04
-            artifacts/lazac-macos-11
+            artifacts/lazac-ubuntu
+            artifacts/lazac-macos
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
