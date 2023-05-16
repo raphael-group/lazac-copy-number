@@ -1,8 +1,8 @@
-# Breaked: resurrecting the copy number transformation model
+# Lazac: maximum parsimony under the zero-agnostic copy number transformation model
 
-*Breaked* is a tool for inferring single-cell resolution copy number
-phylogenies from copy number data. It is based on our *resurrecting
-copy number transformation* (RCNT) model, which we recently introduced
+*Lazac* is a tool for inferring single-cell resolution copy number
+phylogenies from copy number data. It is based on our *zero-agnostic
+copy number transformation* (ZCNT) model, which we recently introduced
 as a simplification of the *copy number transformation* (CNT) model.
 Our algorithm uses tree search and an efficient solver of the small
 parsimony problem to find trees.
@@ -11,27 +11,35 @@ parsimony problem to find trees.
 
 If you find this tool useful in your research, please cite us at:
 ```
+@article{schmidt2023zero,
+  title={A zero-agnostic model for copy number evolution in cancer},
+  author={Schmidt, Henri and Sashittal, Palash and Raphael, Benjamin J},
+  journal={bioRxiv},
+  pages={2023--04},
+  year={2023},
+  publisher={Cold Spring Harbor Laboratory}
+}
 ```
 
 ## Installation
 
-`Breaked` is implemented in C++ and is packaged with the dependencies
+`Lazac` is implemented in C++ and is packaged with the dependencies
 needed to execute the program. In particular, the only dependencies are
 a recent version of CMAKE and a modern C++17 compliant compiler.
 
-To build `Breaked`, execute the following sequence of commands:
+To build `Lazac`, execute the following sequence of commands:
 ```
 $ mkdir build; cd build
 $ cmake ..
 $ make
 ```
-The output binary will be located at `build/src/breaked`.
+The output binary will be located at `build/src/lazac`.
 
 ## Usage
 
-To run *breaked*, simply execute the binary. 
+To run *lazac*, simply execute the binary. 
 ```
-Usage: breaked [--help] [--version] {distance,nni}
+Usage: lazac [--help] [--version] {distance,nni}
 
 Optional arguments:
   -h, --help   	shows help message and exits 
@@ -50,7 +58,7 @@ tree as input.
 
 ### Input format
 
-The input format for *breaked* consists of copy number profiles and
+The input format for *lazac* consists of copy number profiles and
 Newick trees on the profiles. The format for a copy number profile is
 a CSV consisting of at least five columns named `node`, `chrom`,
 `start`, `end`, and `cn_X`.  In particular, `node` is the name of the
@@ -70,7 +78,7 @@ We will construct a topology on bulk tumor sequencing data from
 patient 8 studied in Gundem et al. 2015. First, we will
 compute the distance matrix using the following command:
 ```
-$ breaked distance examples/PTX008_cn_profile.csv -o examples/PTX008
+$ lazac distance examples/PTX008_cn_profile.csv -o examples/PTX008
 ```
 
 Then, we will perform neighbor joining on the distance matrix to
@@ -82,9 +90,9 @@ $ python scripts/resolve_polytomies.py examples/PTX008_rcnt_nj_tree.newick --out
 
 ```
 
-Finally, we will run `breaked nni` to improve upon the candidate
+Finally, we will run `lazac nni` to improve upon the candidate
 topology.
 
 ```
-breaked nni examples/PTX008_cn_profile.csv examples/PTX008_rcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_rcnt_tree
+lazac nni examples/PTX008_cn_profile.csv examples/PTX008_rcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_rcnt_tree
 ```
