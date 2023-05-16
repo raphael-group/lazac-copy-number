@@ -26,7 +26,7 @@ jobs:
           make
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: lazac-${{ matrix.os }}
           path: build/src/lazac
@@ -36,15 +36,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           path: artifacts
+
+      - name: Display structure
+        run: ls -R
+        working-directory: artifacts/
+
+      - name: Prepare artifacts
+        run: |
+          mv artifacts/lazac-ubuntu-release/lazac artifacts/lazac-ubuntu
+          mv artifacts/lazac-macos-release/lazac artifacts/lazac-macos
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/lazac-ubuntu-latest/lazac
-            artifacts/lazac-macos-latest/lazac
+            artifacts/lazac-ubuntu
+            artifacts/lazac-macos
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
