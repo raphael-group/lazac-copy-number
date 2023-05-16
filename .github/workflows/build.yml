@@ -44,7 +44,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/lazac-ubuntu-latest/build/src/lazac
-            artifacts/lazac-macos-latest/build/src/lazac
+            artifacts/lazac-ubuntu-latest/lazac
+            artifacts/lazac-macos-latest/lazac
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
