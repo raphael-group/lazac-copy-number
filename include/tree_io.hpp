@@ -1,6 +1,7 @@
 #ifndef _TREE_IO_H
 #define _TREE_IO_H
 
+#include <optional>
 #include <iostream>
 #include <variant>
 #include <string>
