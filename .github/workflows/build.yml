@@ -29,7 +29,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: lazac-${{ matrix.os }}
-          path: build/lazac
+          path: build/src/lazac
 
   release:
     needs: build
