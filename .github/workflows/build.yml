@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-20.04, macos-11]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -46,14 +46,14 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          mv artifacts/lazac-ubuntu-latest/lazac artifacts/lazac-ubuntu
-          mv artifacts/lazac-macos-latest/lazac artifacts/lazac-macos
+          mv artifacts/lazac-ubuntu-20.04/lazac artifacts/lazac-ubuntu-20.04
+          mv artifacts/lazac-macos-11/lazac artifacts/lazac-macos-11
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/lazac-ubuntu
-            artifacts/lazac-macos
+            artifacts/lazac-ubuntu-20.04
+            artifacts/lazac-macos-11
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
