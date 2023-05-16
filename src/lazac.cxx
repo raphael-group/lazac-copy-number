@@ -18,7 +18,7 @@
 
 #include "copy_number.hpp"
 #include "digraph.hpp"
-#include "breaked.hpp"
+#include "lazac.hpp"
 #include "tree_io.hpp"
 
 using namespace std;
@@ -235,15 +235,15 @@ void do_nni(argparse::ArgumentParser nni) {
 
 int main(int argc, char *argv[])
 {
-    auto console_logger = spdlog::stdout_color_mt("breaked");
+    auto console_logger = spdlog::stdout_color_mt("lazac");
     spdlog::set_default_logger(console_logger);
 
     auto error_logger = spdlog::stderr_color_mt("error");
 
 
     argparse::ArgumentParser program(
-        "breaked",
-        std::to_string(BREAKED_VERSION_MAJOR) + "." + std::to_string(BREAKED_VERSION_MINOR)
+        "lazac",
+        std::to_string(LAZAC_VERSION_MAJOR) + "." + std::to_string(LAZAC_VERSION_MINOR)
     );
 
     argparse::ArgumentParser distance(

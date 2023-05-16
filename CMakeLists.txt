@@ -11,12 +11,12 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter")
 set(CMAKE_CXX_FLAGS_DEBUG "-g --coverage")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-project(breaked VERSION 1.0)
+project(lazac VERSION 1.0)
 
 add_subdirectory(src/)
 
-target_include_directories(breaked PUBLIC "${breaked_SOURCE_DIR}/include")
-target_include_directories(breaked PUBLIC "${breaked_SOURCE_DIR}/third-party/csv-parser/include")
+target_include_directories(lazac PUBLIC "${lazac_SOURCE_DIR}/include")
+target_include_directories(lazac PUBLIC "${lazac_SOURCE_DIR}/third-party/csv-parser/include")
 
 # turn off JSON library tests
 set(JSON_BuildTests OFF CACHE INTERNAL "")

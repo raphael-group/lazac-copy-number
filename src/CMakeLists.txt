@@ -1,13 +1,13 @@
 configure_file(
-    "${breaked_SOURCE_DIR}/include/breaked.hpp.in" 
-    "${breaked_SOURCE_DIR}/include/breaked.hpp"
+    "${lazac_SOURCE_DIR}/include/lazac.hpp.in"
+    "${lazac_SOURCE_DIR}/include/lazac.hpp"
 )
 
-add_executable(breaked breaked.cxx tree_io.cxx copy_number.cxx)
+add_executable(lazac lazac.cxx tree_io.cxx copy_number.cxx)
 
 # add libraries
-target_link_libraries(breaked PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(breaked PRIVATE pprint)
-target_link_libraries(breaked PRIVATE spdlog)
-target_link_libraries(breaked PRIVATE csv)
-target_link_libraries(breaked PRIVATE argparse)
+target_link_libraries(lazac PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(lazac PRIVATE pprint)
+target_link_libraries(lazac PRIVATE spdlog)
+target_link_libraries(lazac PRIVATE csv)
+target_link_libraries(lazac PRIVATE argparse)

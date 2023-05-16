@@ -44,6 +44,8 @@ namespace copynumber {
             for (size_t i = 0; i < profile.size(); i++) {
                 if (i == 0) {
                     bp_profile[i] = profile[i] - diploid_cn;
+                } else if (i == profile.size() - 1) {
+                    bp_profile[i] = diploid_cn - profile[i];
                 } else {
                     bp_profile[i] = profile[i] - profile[i - 1];
                 }

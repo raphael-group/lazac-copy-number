@@ -1,0 +1,7 @@
+#ifndef _LAZAC_H
+#define _LAZAC_H
+
+#define LAZAC_VERSION_MAJOR @lazac_VERSION_MAJOR@
+#define LAZAC_VERSION_MINOR @lazac_VERSION_MINOR@
+
+#endif

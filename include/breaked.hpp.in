@@ -1,7 +1,0 @@
-#ifndef _BREAKED_H
-#define _BREAKED_H
-
-#define BREAKED_VERSION_MAJOR @breaked_VERSION_MAJOR@
-#define BREAKED_VERSION_MINOR @breaked_VERSION_MINOR@
-
-#endif
