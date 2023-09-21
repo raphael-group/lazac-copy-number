@@ -27,7 +27,13 @@ If you find this tool useful in your research, please cite us at:
 needed to execute the program. In particular, the only dependencies are
 a recent version of CMAKE and a modern C++17 compliant compiler.
 
-To build `Lazac`, execute the following sequence of commands:
+To build `Lazac` from source, first clone the repository and its submodules:
+```
+$ git clone --recurse-submodules https://github.com/raphael-group/lazac-copy-number.git
+```
+
+Then from the root of the project directory, execute the following sequence o
+commands:
 ```
 $ mkdir build; cd build
 $ cmake ..

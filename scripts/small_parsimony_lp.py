@@ -77,8 +77,8 @@ def zcnt_small_parsimony_all(tree, cnp_profiles, env, integral=False, balancing=
             Q = Q[:, 1:] - Q[:, :-1] 
             Qs.append(Q)
 
-    obj, _ = zcnt_small_parsimony(Qs, tree.edges, len(tree.nodes), env=env, integral=integral, balancing=balancing)
-    return obj
+    obj, l = zcnt_small_parsimony(Qs, tree.edges, len(tree.nodes), env=env, integral=integral, balancing=balancing)
+    return obj, l
 
 def tree_to_newick(T, root=None):
     if root is None:
@@ -215,26 +215,28 @@ if __name__ == "__main__":
     node_rename_map = row_map | node_rename_map
 
     tree = nx.relabel_nodes(tree, node_rename_map)
+    score, labeling = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, integral=True, balancing=True)
 
-    rows = []
-    with gp.Env(empty=True) as env:
-        # env.setParam('OutputFlag', 0)
-        env.start()
 
-        for it in tqdm(range(1)):
-            score_no_balancing = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, balancing=False, integral=True)
-            score_no_integrality = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, integral=False)
-            score_integrality = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, integral=True, balancing=True)
+    # rows = []
+    # with gp.Env(empty=True) as env:
+    #     # env.setParam('OutputFlag', 0)
+    #     env.start()
 
-            row = {
-                "stochastic_perturbations": it,
-                "score_no_balancing": score_no_balancing,
-                "score_no_integrality": score_no_integrality,
-                "score_integrality": score_integrality,
-            }
+    #     for it in tqdm(range(1)):
+    #         score_no_balancing = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, balancing=False, integral=True)
+    #         score_no_integrality = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, integral=False)
+    #         score_integrality = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, integral=True, balancing=True)
 
-            tree = stochastic_nni(tree, aggression=0.25)
-            rows.append(row)
+    #         row = {
+    #             "stochastic_perturbations": it,
+    #             "score_no_balancing": score_no_balancing,
+    #             "score_no_integrality": score_no_integrality,
+    #             "score_integrality": score_integrality,
+    #         }
 
-    df = pd.DataFrame(rows)
-    df.to_csv('output.csv', index=False)
+    #         tree = stochastic_nni(tree, aggression=0.25)
+    #         rows.append(row)
+
+    # df = pd.DataFrame(rows)
+    # df.to_csv('output.csv', index=False)

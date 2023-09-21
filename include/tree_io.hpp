@@ -6,6 +6,7 @@
 #include <variant>
 #include <string>
 #include <stdexcept>
+#include <optional>
 
 #include "digraph.hpp"
 
