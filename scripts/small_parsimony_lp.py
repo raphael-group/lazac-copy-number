@@ -5,7 +5,7 @@ from Bio import Phylo
 import numpy as np
 import random
 from tqdm import tqdm
-import scipy.sparse as sp
+import pickle
 
 import argparse
 import gurobipy as gp
@@ -46,32 +46,32 @@ def zcnt_small_parsimony(Qs, tree_edges, k, env=None, integral=False, balancing=
                 model.addConstr(quicksum(l[i, offset + j] for j in range(qm)) == 0, name=f"constraint_1_{i}")
                 offset += qm
 
-    for i in range(n):
-        for j in range(m):
-            model.addConstr(l[i, j] == Q[i, j], name=f"constraint_2_{i}_{j}")
+    model.addConstrs((l[i, j] == Q[i, j] for i in range(n) for j in range(m)), name=f"constraint_2")
     
-    for i, j in tree_edges:
-        for l_index in range(m):
-            model.addConstr(l[i, l_index] - x_plus[i, j, l_index] <= 0, name=f"constraint_3_{i}_{j}_{l_index}")
-            model.addConstr(l[j, l_index] - x_plus[i, j, l_index] <= 0, name=f"constraint_4_{i}_{j}_{l_index}")
-            model.addConstr(x_minus[i, j, l_index] - l[j, l_index] <= 0, name=f"constraint_5_{i}_{j}_{l_index}")
-            model.addConstr(x_minus[i, j, l_index] - l[i, l_index] <= 0, name=f"constraint_6_{i}_{j}_{l_index}")
+    model.addConstrs((l[i, l_index] - x_plus[i, j, l_index] <= 0 for i, j in tree_edges for l_index in range(m)), name="constraint_3")
+    model.addConstrs((l[j, l_index] - x_plus[i, j, l_index] <= 0 for i, j in tree_edges for l_index in range(m)), name="constraint_4")
+    model.addConstrs((x_minus[i, j, l_index] - l[j, l_index] <= 0 for i, j in tree_edges for l_index in range(m)), name="constraint_5")
+    model.addConstrs((x_minus[i, j, l_index] - l[i, l_index] <= 0 for i, j in tree_edges for l_index in range(m)), name="constraint_6")
 
-    model.setParam('NumericFocus', 3)
+    # model.setParam('NumericFocus', 3)
     model.optimize()
 
-    l_solution = {(i, j): l[i, j].X for i in range(n) for j in range(m)}
+    l_Q_solutions = []
+    offset = 0
+    for Q in Qs:
+        l_Q = np.zeros((k, Q.shape[1]))
+        for i in range(k):
+            for j in range(Q.shape[1]):
+                l_Q[i, j] = l[i, offset + j].X
+        offset += Q.shape[1]
+        l_Q_solutions.append(l_Q)
+
     x_plus_solution = {(i, j, k): x_plus[i, j, k].X for i, j in tree_edges for k in range(m)}
     x_minus_solution = {(i, j, k): x_minus[i, j, k].X for i, j in tree_edges for k in range(m)}
 
-    return model.objVal, l_solution
+    return model.objVal, l_Q_solutions
 
-def zcnt_small_parsimony_all(tree, cnp_profiles, env, integral=False, balancing=True):
-    Qs = []
-    for allele in ['cn_a', 'cn_b']:
-        for chrom in cnp_profiles['chrom'].unique():
-            cn_matrix, _, _ = cnp_profiles_to_cn_matrix(cnp_profiles, chrom, allele)
-
+<<<<<<< Updated upstream
             synthetic_gene = np.ones((cn_matrix.shape[0], 1))
             Q = np.hstack((synthetic_gene, cn_matrix, synthetic_gene))
             Q = Q[:, 1:] - Q[:, :-1] 
@@ -79,6 +79,11 @@ def zcnt_small_parsimony_all(tree, cnp_profiles, env, integral=False, balancing=
 
     obj, l = zcnt_small_parsimony(Qs, tree.edges, len(tree.nodes), env=env, integral=integral, balancing=balancing)
     return obj, l
+=======
+def zcnt_small_parsimony_all(tree, Qs, env=None, integral=False, balancing=True):
+    obj, l_solution = zcnt_small_parsimony(Qs, tree.edges, len(tree.nodes), env=env, integral=integral, balancing=balancing)
+    return obj, l_solution
+>>>>>>> Stashed changes
 
 def tree_to_newick(T, root=None):
     if root is None:
@@ -147,46 +152,9 @@ def cnp_profiles_to_cn_matrix(cnp_profile_df, chrom, allele):
 
     return Q, row_map, column_map
 
-"""
-Stochastically pertubs T using NNI operations.
-"""
-def stochastic_nni(T, aggression=0.50):
-    T = T.copy()
-
-    internal_edges = [(u, v) for (u, v) in T.edges if not is_leaf(T, v)]
-    num_perturbations = math.floor(len(internal_edges) * aggression)
-    count = 0
-    while count < num_perturbations:
-        internal_edges = [(u, v) for (u, v) in T.edges if not is_leaf(T, v)]
-        u, v = random.sample(list(internal_edges), 1)[0]
-
-        if is_leaf(T, v):
-            continue
-
-        u_children = list(set(T[u].keys()) - set([v]))
-        v_children = list(T[v].keys())
-
-        u_edges = [(u, w) for w in u_children]
-        v_edges = [(v, w) for w in v_children]
-        if not u_edges or not v_edges:
-            continue
-
-        u, w = random.sample(u_edges, 1)[0]
-        v, z = random.sample(v_edges, 1)[0]
-
-        # swap e1 and e2
-        T.remove_edge(u, w) 
-        T.remove_edge(v, z)
-        T.add_edge(v, w)
-        T.add_edge(u, z) 
-
-        count += 1
-
-    return T
-
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Compute ZCNT parsimony using a LP."
+        description="Compute ZCNT small parsimony score using an ILP."
     )
 
     parser.add_argument(
@@ -195,6 +163,10 @@ def parse_arguments():
 
     parser.add_argument(
         "input_tree", help="Newick tree"
+    )
+
+    parser.add_argument(
+        "--output", help="Results output file", default="out.pickle"
     )
 
     return parser.parse_args()
@@ -217,6 +189,7 @@ if __name__ == "__main__":
     tree = nx.relabel_nodes(tree, node_rename_map)
     score, labeling = zcnt_small_parsimony_all(tree, cnp_profiles, env=env, integral=True, balancing=True)
 
+<<<<<<< Updated upstream
 
     # rows = []
     # with gp.Env(empty=True) as env:
@@ -240,3 +213,26 @@ if __name__ == "__main__":
 
     # df = pd.DataFrame(rows)
     # df.to_csv('output.csv', index=False)
+=======
+    allele_chrom_pairs = []
+    Qs = [] # contains the Q matrices for all (allele, chrm pairs)
+    for allele in ['cn_a']:
+        for chrom in tqdm(cnp_profiles['chrom'].unique()):
+            cn_matrix, _, _ = cnp_profiles_to_cn_matrix(cnp_profiles, chrom, allele)
+            synthetic_gene = 2 * np.ones((cn_matrix.shape[0], 1))
+            Q = np.hstack((synthetic_gene, cn_matrix, synthetic_gene))
+            Q = Q[:, 1:] - Q[:, :-1] 
+            allele_chrom_pairs.append((allele, chrom))
+            Qs.append(Q)
+
+    score_integrality, labels = zcnt_small_parsimony_all(tree, Qs, integral=True, balancing=True)
+
+    with open(args.output, 'wb') as f:
+        pickle.dump({
+            "score": score_integrality,
+            "labeling": labels,
+            "node_rename_map": node_rename_map,
+            "allele_chrom_pairs": allele_chrom_pairs,
+            "edgelist": [e for e in tree.edges] 
+        }, f)
+>>>>>>> Stashed changes
