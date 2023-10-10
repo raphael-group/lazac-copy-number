@@ -56,8 +56,8 @@ Subcommands:
   nni           Infers a copy number tree using NNI operations
 ```
 
-The tool has two modes: distance matrix construction using the RCNT
-distance and a heuristic tree search algorithm for the RCNT large
+The tool has two modes: distance matrix construction using the ZCNT
+distance and a heuristic tree search algorithm for the ZCNT large
 parsimony problem. The `distance` mode takes copy number profiles as
 input. The `nni` mode takes both copy number profiles and a Newick
 tree as input.
