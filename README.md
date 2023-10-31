@@ -60,7 +60,9 @@ The tool has two modes: distance matrix construction using the ZCNT
 distance and a heuristic tree search algorithm for the ZCNT large
 parsimony problem. The `distance` mode takes copy number profiles as
 input. The `nni` mode takes both copy number profiles and a Newick
-tree as input.
+tree as input. **Note: Lazac infers an unrooted tree by default.
+To obtain a rooted tree, add a diploid normal sample to the set
+input profiles and then root the unrooted tree at this sample.**
 
 ### Input format
 
@@ -93,12 +95,19 @@ arbitrarily resolve polytomies to make the tree binary
 ```
 $ python scripts/nj.py examples/PTX008_dist_matrix.csv --output examples/PTX008_rcnt_nj_tree.newick
 $ python scripts/resolve_polytomies.py examples/PTX008_rcnt_nj_tree.newick --output examples/PTX008_rcnt_nj_tree.binary.newick
-
 ```
 
-Finally, we will run `lazac nni` to improve upon the candidate
+Then, we will run `lazac nni` to improve upon the candidate
 topology.
 
 ```
-lazac nni examples/PTX008_cn_profile.csv examples/PTX008_rcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_rcnt_tree
+$ lazac nni examples/PTX008_cn_profile.csv examples/PTX008_rcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_rcnt
+```
+
+Finally, we can root our tree at a desired node. For best results, add
+a fake, diploid normal sample to the input set of profiles and root 
+the tree at this sample.
+
+```
+$ python scripts/root.py examples/PTX008_rcnt_tree.newick [ROOT] --output [OUTPUT.NEWICK]
 ```
