@@ -23,6 +23,15 @@ If you find this tool useful in your research, please cite us at:
 
 ## Installation
 
+`lazac` can be installed automatically using Conda. 
+Simply execute,
+```
+$ conda install -c schmidt73 lazac
+```
+and Lazac will be available as `lazac`.
+
+### Manual installation
+
 `Lazac` is implemented in C++ and is packaged with the dependencies
 needed to execute the program. In particular, the only dependencies are
 a recent version of CMAKE and a modern C++17 compliant compiler.
