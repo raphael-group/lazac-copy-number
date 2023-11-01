@@ -1,0 +1,18 @@
+package:
+  name: lazac
+  version: "1.0.0"
+
+source:
+  path: ..
+
+build:
+  script: cmake . && make && mkdir -p ${PREFIX}/bin && mv src/lazac ${PREFIX}/bin
+
+requirements:
+  build:
+    - {{ compiler('cxx') }}
+
+about:
+  home: https://github.com/raphael-group/lazac-copy-number/
+  license: MIT
+  summary: "Lazac: maximum parsimony under the ZCNT model"
