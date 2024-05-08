@@ -14,10 +14,12 @@ If you find this tool useful in your research, please cite us at:
 @article{schmidt2023zero,
   title={A zero-agnostic model for copy number evolution in cancer},
   author={Schmidt, Henri and Sashittal, Palash and Raphael, Benjamin J},
-  journal={bioRxiv},
-  pages={2023--04},
+  journal={PLoS computational biology},
+  volume={19},
+  number={11},
+  pages={e1011590},
   year={2023},
-  publisher={Cold Spring Harbor Laboratory}
+  publisher={Public Library of Science San Francisco, CA USA}
 }
 ```
 
