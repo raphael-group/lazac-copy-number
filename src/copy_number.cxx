@@ -58,6 +58,41 @@ namespace copynumber {
         return bp;
     }
 
+    copynumber_profile convert_to_copynumber_profile(const breakpoint_profile &p, int diploid_cn) {
+        std::map<std::pair<std::string, std::string>, breakpoint_profile> chrom_allele_profiles;
+        for (size_t i = 0; i < p.bins.size(); i++) {
+            auto chrom_allele = std::make_pair(p.bins[i].chromosome, p.bins[i].allele);
+            if (!chrom_allele_profiles.count(chrom_allele)) {
+                chrom_allele_profiles[chrom_allele] = breakpoint_profile();
+            }
+
+            chrom_allele_profiles[chrom_allele].bins.push_back(p.bins[i]);
+            chrom_allele_profiles[chrom_allele].profile.push_back(p.profile[i]);
+        }
+
+        copynumber_profile cn;
+        for (const auto &[chrom_allele, bp_profile] : chrom_allele_profiles) {
+            std::vector<size_t> index_vector = argsort(bp_profile.bins);
+            std::vector<genomic_bin> bins = select(bp_profile.bins, index_vector);
+            std::vector<int> profile = select(bp_profile.profile, index_vector);
+
+            std::vector<int> cn_profile(profile.size());
+            for (size_t i = 0; i < profile.size(); i++) {
+                if (i == 0) {
+                    cn_profile[i] = profile[i] + diploid_cn;
+                } else if (i == profile.size() - 1) {
+                    cn_profile[i] = diploid_cn - profile[i];
+                } else {
+                    cn_profile[i] = profile[i] + cn_profile[i - 1];
+                }
+
+                cn.profile.push_back(cn_profile[i]);
+                cn.bins.push_back(bins[i]);
+            }
+        }
+
+        return cn;
+    }
     /*
       Computes the breakpoint magnitude of a *chromosome and allele
       sorted* breakpoint profile.

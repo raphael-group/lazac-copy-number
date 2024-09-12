@@ -223,6 +223,44 @@ void do_nni(argparse::ArgumentParser nni) {
               });
 
     auto final_tree = ancestral_labeling(candidate_trees[candidate_trees.size() - 1], 0, sorted_bins);
+
+    for (auto u : final_tree.nodes()) {
+        std::cout << "NAME: " << final_tree[u].data.name << std::endl;
+        auto &profile = final_tree[u].data.profile;
+        for (int i = 0; i < profile.profile.size(); i++) {
+            std::cout << "chromosome: " << profile.bins[i].chromosome;
+            std::cout << " allele: " << profile.bins[i].allele;
+            std::cout << " start: " << profile.bins[i].start;
+            std::cout << " end: " << profile.bins[i].end;
+            std::cout << " cn: " << profile.profile[i] << std::endl;
+        }
+    }
+
+    digraph<copynumber_profile_vertex_data> final_cn_tree;
+    for (auto u : final_tree.nodes()) {
+        copynumber_profile_vertex_data d;
+        d.name = final_tree[u].data.name;
+        d.profile = convert_to_copynumber_profile(final_tree[u].data.profile, 2);
+        d.in_branch_length = final_tree[u].data.in_branch_length;
+        final_cn_tree.add_vertex(d);
+    }
+
+    for (auto [u, v] : final_tree.edges()) {
+        final_cn_tree.add_edge(u, v);
+    }
+
+    for (auto u : final_cn_tree.nodes()) {
+        std::cout << "NAME: " << final_cn_tree[u].data.name << std::endl;
+        auto &profile = final_cn_tree[u].data.profile;
+        for (int i = 0; i < profile.profile.size(); i++) {
+            std::cout << "chromosome: " << profile.bins[i].chromosome;
+            std::cout << " allele: " << profile.bins[i].allele;
+            std::cout << " start: " << profile.bins[i].start;
+            std::cout << " end: " << profile.bins[i].end;
+            std::cout << " cn: " << profile.profile[i] << std::endl;
+        }
+    }
+
     std::string newick_string = treeio::print_newick_tree(final_tree);
     newick_string += ";";
 

@@ -110,12 +110,19 @@ namespace copynumber {
         std::optional<int> in_branch_length;
     };
 
+    struct copynumber_profile_vertex_data {
+        std::string name;
+        copynumber_profile profile;
+        std::optional<int> in_branch_length;
+    };
+
     /*
       Creates a breakpoint profile from a copy number profile
       where each chromosome and allele pair is considered seperately
       and genomic bins are sorted by their starting position.
     */
     breakpoint_profile convert_to_breakpoint_profile(const copynumber_profile &p, int diploid_cn);
+    copynumber_profile convert_to_copynumber_profile(const breakpoint_profile &p, int diploid_cn);
 
     /*
       Overlaps two intervals [s1, e1], [s2, e2], returning the empty set 
