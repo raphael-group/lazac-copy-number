@@ -71,9 +71,15 @@ The tool has two modes: distance matrix construction using the ZCNT
 distance and a heuristic tree search algorithm for the ZCNT large
 parsimony problem. The `distance` mode takes copy number profiles as
 input. The `nni` mode takes both copy number profiles and a Newick
-tree as input. **Note: Lazac infers an unrooted tree by default.
-To obtain a rooted tree, add a diploid normal sample to the set
-input profiles and then root the unrooted tree at this sample.**
+tree as input. If one is interested in inferring a tree from scratch,
+we recommend using the `distance` mode to compute a distance matrix,
+constructing a starting tree using neighbor joining, and then running
+the `nni` mode to improve upon the starting tree using the ZCNT model.
+
+> [!WARNING]
+> Lazac infers an unrooted tree by default.
+> To obtain a rooted tree, add a diploid normal sample to the set
+> input profiles and then root the unrooted tree at this sample.
 
 ### Input format
 
@@ -90,6 +96,19 @@ column of the copy number profiles.
 
 An example input format CSV is given
 `examples/PTX008_cn_profiles.csv`.
+
+### Output format
+
+The output of *lazac* is a tree, inferred ancestral copy number 
+profiles, and progress information regarding the run. The files
+are named and formatted as follows:
+* `PREFIX_tree.newick` is the tree output in Newick format with branch lengths representing the ZCNT distance 
+   between the two nodes. Internal nodes are prefixed with the string `internal_`. 
+* `PREFIX_cn_profile.csv` contains the inferred copy number profiles at the internal nodes of the tree. Each
+   row provides the copy number of a specific node at a specific genomic bin. Both internal and leaf nodes are
+   included in the output.
+* `PREFIX_info.json` provides information about the run, such as the ZCNT small parsimony scores of the trees
+   at each iteration of the tree search algorithm.
 
 ## Usage Example
 

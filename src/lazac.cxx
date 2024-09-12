@@ -241,10 +241,19 @@ void do_nni(argparse::ArgumentParser nni) {
     newick_string += ";";
 
     std::ofstream newick_output(nni.get<std::string>("-o") + "_tree.newick", std::ios::out);
-    newick_output << newick_string;
+    newick_output << newick_string << "\n";
 
     std::ofstream info_output(nni.get<std::string>("-o") + "_info.json", std::ios::out);
-    info_output << progress_information.dump();
+    info_output << progress_information.dump() << "\n";
+
+    std::ofstream cn_profile_output(nni.get<std::string>("-o") + "_cn_profile.csv", std::ios::out);
+    cn_profile_output << "node,chrom,allele,start,end,cn" << std::endl;
+    for (auto u : final_cn_tree.nodes()) {
+        auto& d = final_cn_tree[u].data;
+        for (std::vector<int>::size_type i = 0; i < d.profile.profile.size(); i++) {
+            cn_profile_output << d.name << "," << d.profile.bins[i].chromosome << "," << d.profile.bins[i].allele << "," << d.profile.bins[i].start << "," << d.profile.bins[i].end << "," << d.profile.profile[i] << std::endl;
+        }
+    }
 }
 
 int main(int argc, char *argv[])
