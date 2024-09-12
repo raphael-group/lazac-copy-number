@@ -1,5 +1,5 @@
 import argparse
-import ete3
+from Bio import Phylo
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -23,8 +23,8 @@ def parse_arguments():
 
 if __name__ == "__main__":
     args = parse_arguments()
-    t = ete3.Tree(args.tree, format=1)
-    t.set_outgroup(args.root)
-    t.write(format=1, outfile=args.output)
-    t.show()
-    
+
+    tree = Phylo.read(args.tree, 'newick')
+    tree.root_with_outgroup(args.root)
+    Phylo.write(tree, args.output, 'newick')
+

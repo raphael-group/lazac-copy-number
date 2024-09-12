@@ -1,4 +1,4 @@
-# Lazac: maximum parsimony under the zero-agnostic copy number transformation model
+## Lazac: maximum parsimony under the zero-agnostic copy number transformation model
 
 *Lazac* is a tool for inferring single-cell resolution copy number
 phylogenies from copy number data. It is based on our *zero-agnostic
@@ -78,6 +78,10 @@ the `nni` mode to improve upon the starting tree using the ZCNT model.
 > Lazac infers an unrooted tree by default.
 > To obtain a rooted tree, add a diploid normal sample to the set
 > input profiles and then root the unrooted tree at this sample.
+
+> [!WARNING]
+> Lazac takes a binary tree as input. Please resolve any polytomies 
+> in the input tree before running the Lazac.
 
 ### Input format
 
