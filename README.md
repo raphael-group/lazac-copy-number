@@ -1,4 +1,4 @@
-# Lazac: maximum parsimony under the zero-agnostic copy number transformation model
+![logo](docs/lazac_logo.png) # Lazac: maximum parsimony under the zero-agnostic copy number transformation model
 
 *Lazac* is a tool for inferring single-cell resolution copy number
 phylogenies from copy number data. It is based on our *zero-agnostic
@@ -6,8 +6,6 @@ copy number transformation* (ZCNT) model, which we recently introduced
 as a simplification of the *copy number transformation* (CNT) model.
 Our algorithm uses tree search and an efficient solver of the small
 parsimony problem to find trees.
-
-![overview](docs/overview.png)
 
 If you find this tool useful in your research, please cite us at:
 ```
