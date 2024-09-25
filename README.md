@@ -133,7 +133,7 @@ a fake, diploid normal sample to the input set of profiles and root
 the tree at this sample.
 
 ```
-$ python scripts/root.py examples/PTX008_zcnt_tree.newick [ROOT] --output [OUTPUT.NEWICK]
+$ python scripts/root.py examples/PTX008_tree.newick [ROOT] --output [OUTPUT.NEWICK]
 ```
 
 ### Option 2: Passing in a seed tree
