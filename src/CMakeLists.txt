@@ -5,7 +5,7 @@ configure_file(
 
 add_executable(lazac 
     lazac.cxx tree_io.cxx copy_number.cxx 
-    clearcut.c cmdargs.c dist.c dmat.c fasta.c prng.c
+    clearcut.cxx cmdargs.cxx dist.cxx dmat.cxx fasta.cxx prng.cxx getopt_long.cxx
     )
 
 # add libraries

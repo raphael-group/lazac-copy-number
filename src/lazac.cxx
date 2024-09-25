@@ -21,6 +21,14 @@
 #include "lazac.hpp"
 #include "tree_io.hpp"
 
+#include "dist.h"
+#include "dmat.h"
+#include "fasta.h"
+#include "cmdargs.h"
+#include "common.h"
+#include "clearcut.h"
+#include "prng.h"
+
 using namespace std;
 using namespace copynumber;
 
@@ -52,14 +60,7 @@ std::map<std::string, copynumber_profile> read_cn_profiles(std::string cn_profil
     return cn_profiles;
 }
 
-void do_distance(argparse::ArgumentParser distance) {
-    std::map<std::string, copynumber_profile> cn_profiles = read_cn_profiles(distance.get<std::string>("cn_profile"));
-    std::map<std::string, breakpoint_profile> bp_profiles;
-    for (const auto &[name, cn_profile] : cn_profiles) {
-        auto bp_profile = convert_to_breakpoint_profile(cn_profile, 2);
-        bp_profiles[name] = bp_profile;
-    }
-
+std::pair<std::vector<string>, std::vector<std::vector<int>>> build_distance_matrix(std::map<std::string, breakpoint_profile> bp_profiles) {
     std::vector<std::string> names; 
     for (const auto& [name, _] : bp_profiles) {
         names.push_back(name);
@@ -89,6 +90,20 @@ void do_distance(argparse::ArgumentParser distance) {
         }
     }
 
+    spdlog::info("Finished building {} x {} distance matrix.", names.size(), names.size());
+    return std::make_tuple(names, distance_matrix);
+}
+
+void do_distance(argparse::ArgumentParser distance) {
+    std::map<std::string, copynumber_profile> cn_profiles = read_cn_profiles(distance.get<std::string>("cn_profile"));
+    std::map<std::string, breakpoint_profile> bp_profiles;
+    for (const auto &[name, cn_profile] : cn_profiles) {
+        auto bp_profile = convert_to_breakpoint_profile(cn_profile, 2);
+        bp_profiles[name] = bp_profile;
+    }
+
+    auto [names, distance_matrix] = build_distance_matrix(bp_profiles);
+
     std::ofstream matrix_output(distance.get<std::string>("-o") + "_dist_matrix.csv", std::ios::out);
     for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
         if (i != 0) matrix_output << ",";
@@ -103,6 +118,17 @@ void do_distance(argparse::ArgumentParser distance) {
         }
         matrix_output << std::endl;
     }
+
+
+    std::ofstream matrix_output_txt(distance.get<std::string>("-o") + "_dist_matrix.txt", std::ios::out);
+    matrix_output_txt << names.size() << std::endl;
+    for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
+        matrix_output_txt << names[i];
+        for (std::vector<int>::size_type j = 0; j < names.size(); j++) {
+            matrix_output_txt << " " << distance_matrix[i][j];
+        }
+        matrix_output_txt << std::endl;
+    }
 }
 
 void do_nni(argparse::ArgumentParser nni) {
@@ -110,13 +136,7 @@ void do_nni(argparse::ArgumentParser nni) {
     pprint::PrettyPrinter printer(printer_stream);
     printer.compact(true);
 
-    std::ifstream in(nni.get<std::string>("seed_tree"));
-    std::stringstream buffer;
-    buffer << in.rdbuf();
-    std::string seed_tree_newick = buffer.str();
-
-    digraph<treeio::newick_vertex_data> t = treeio::read_newick_node(seed_tree_newick);
-
+    /* Load copy number profiles */
     std::map<std::string, copynumber_profile> cn_profiles = read_cn_profiles(nni.get<std::string>("cn_profile"));
     std::map<std::string, breakpoint_profile> bp_profiles;
     std::vector<genomic_bin> sorted_bins;
@@ -124,6 +144,67 @@ void do_nni(argparse::ArgumentParser nni) {
         auto bp_profile = convert_to_breakpoint_profile(cn_profile, 2);
         bp_profiles[name] = bp_profile;
         sorted_bins = bp_profile.bins;
+    }
+
+    /* Load/initialize seed tree */
+    digraph<treeio::newick_vertex_data> t;
+    if (nni.get<std::string>("tree") == "") {
+        spdlog::info("No seed tree provided for NNI inference, building tree using neighbor joining.");
+        auto [names, distance_matrix] = build_distance_matrix(bp_profiles);
+
+        /* Write distance matrix to file */
+        std::string distance_matrix_file = nni.get<std::string>("-o") + "_dist_matrix.txt";
+        std::ofstream matrix_output(distance_matrix_file, std::ios::out);
+        matrix_output << names.size() << std::endl;
+        for (std::vector<int>::size_type i = 0; i < names.size(); i++) {
+            matrix_output << names[i];
+            for (std::vector<int>::size_type j = 0; j < names.size(); j++) {
+                matrix_output << " " << distance_matrix[i][j];
+            }
+            matrix_output << std::endl;
+        }
+
+        /* Build NJ tree using Clearcut algorithm */
+        std::string output_tree = nni.get<std::string>("-o") + "_nj_tree.newick";
+        spdlog::info("Building NJ tree from distance matrix using neighbor joining.");
+
+        init_genrand(nni.get<int>("-s"));
+
+        NJ_ARGS args;
+        args.infilename = (char*) distance_matrix_file.c_str();
+        args.stdin_flag = false;
+        args.stdout_flag = false;
+        args.outfilename = (char*) output_tree.c_str();
+        args.ntrees = 1;
+
+        DMAT* dmat = NJ_parse_distance_matrix(&args);
+        if (!dmat) {
+            throw std::runtime_error("Failed to parse distance matrix.");
+        }
+
+        NJ_shuffle_distance_matrix(dmat);
+        NJ_TREE* tree = NJ_neighbor_joining(&args, dmat);
+
+        spdlog::info("Outputting NJ tree to file: {}", output_tree);
+        NJ_output_tree(&args, tree, dmat, 0);
+
+        NJ_free_tree(tree);
+        NJ_free_dmat(dmat);
+
+        /* Read NJ tree */
+        std::ifstream in(output_tree);
+        std::stringstream buffer;
+        buffer << in.rdbuf();
+        std::string seed_tree_newick = buffer.str();
+        t = treeio::read_newick_node(seed_tree_newick);
+    } else {
+        spdlog::info("Reading seed tree from file: {}", nni.get<std::string>("tree"));
+
+        std::ifstream in(nni.get<std::string>("tree"));
+        std::stringstream buffer;
+        buffer << in.rdbuf();
+        std::string seed_tree_newick = buffer.str();
+        t = treeio::read_newick_node(seed_tree_newick);
     }
 
     /* Creates rectilinear vertex data */
@@ -152,8 +233,7 @@ void do_nni(argparse::ArgumentParser nni) {
         rectilinear_tree.add_edge(u, v);
     }
 
-    std::random_device rd;
-    std::ranlux48_base gen(rd());
+    std::ranlux48_base gen(nni.get<int>("-s"));
 
     /*
       Candidate tree set is obtained by randomly
@@ -291,8 +371,9 @@ int main(int argc, char *argv[])
     nni.add_argument("cn_profile")
         .help("copy number profile in CSV format");
 
-    nni.add_argument("seed_tree")
-        .help("seed tree in Newick format.");
+    nni.add_argument("-t", "--tree")
+        .help("seed tree in Newick format.")
+        .default_value(std::string(""));
 
     nni.add_argument("-o", "--output")
         .help("prefix of the output files")
@@ -312,6 +393,11 @@ int main(int argc, char *argv[])
         .help("use greedy hill climbing strategy as opposed to full NNI neighborhood exploration")
         .default_value(false)
         .implicit_value(true);
+
+    nni.add_argument("-s", "--seed")
+        .help("seed for random number generator")
+        .default_value(0)
+        .scan<'d', int>();
 
     program.add_subparser(nni);
     program.add_subparser(distance);
