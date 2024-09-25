@@ -55,7 +55,7 @@ namespace treeio {
     }
 
     void read_newick_node(const std::string &newick, size_t &position,
-                          digraph<newick_vertex_data>& tree, int root, int internal_counter) {
+                          digraph<newick_vertex_data>& tree, int root, int &internal_counter) {
         // Case 1: Check if leaf
         token t = read_token(newick, position);
         if (t != (token) separator::LEFT_PAREN){ 
@@ -115,7 +115,8 @@ namespace treeio {
         d.name = "root";
         int root = t.add_vertex(d);
         size_t position = 0;
-        read_newick_node(newick, position, t, root, 0);
+        int counter = 0;
+        read_newick_node(newick, position, t, root, counter);
         return t;
     }
 
