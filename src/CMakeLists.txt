@@ -3,7 +3,10 @@ configure_file(
     "${lazac_SOURCE_DIR}/include/lazac.hpp"
 )
 
-add_executable(lazac lazac.cxx tree_io.cxx copy_number.cxx)
+add_executable(lazac 
+    lazac.cxx tree_io.cxx copy_number.cxx 
+    clearcut.c cmdargs.c dist.c dmat.c fasta.c prng.c
+    )
 
 # add libraries
 target_link_libraries(lazac PRIVATE nlohmann_json::nlohmann_json)
