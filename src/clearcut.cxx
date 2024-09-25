@@ -1321,7 +1321,7 @@ NJ_output_tree(NJ_ARGS *nj_args,
   }
 
   NJ_output_tree2(fp, nj_args, tree, tree, dmat);
-  fprintf(fp, " ;\n");
+  fprintf(fp, ";\n");
   
   if(!nj_args->stdout_flag) {
     fclose(fp);
@@ -1357,9 +1357,9 @@ NJ_output_tree2(FILE *fp,
 	      dmat->taxaname[tree->taxa_index],
 	      tree->dist);
     } else {
-      fprintf(fp, "%s:%f", 
-	      dmat->taxaname[tree->taxa_index],
-	      tree->dist);
+      fprintf(fp, "%s", 
+	      dmat->taxaname[tree->taxa_index]
+	  );
     }
     
   } else {
@@ -1385,7 +1385,7 @@ NJ_output_tree2(FILE *fp,
 	  if(nj_args->expblen) {
 	    fprintf(fp, "):%e", tree->dist);
 	  } else {
-	    fprintf(fp, "):%f", tree->dist);
+	    fprintf(fp, ")");
 	  }
 	} else {
 	  fprintf(fp, ")");

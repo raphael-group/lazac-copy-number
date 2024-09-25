@@ -160,7 +160,7 @@ Then, we will run `lazac nni` to improve upon the candidate
 topology.
 
 ```
-$ lazac nni examples/PTX008_cn_profile.csv examples/PTX008_zcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_zcnt
+$ lazac nni examples/PTX008_cn_profile.csv -t examples/PTX008_zcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_zcnt
 ```
 
 Finally, we can root our tree at a desired node. For best results, add

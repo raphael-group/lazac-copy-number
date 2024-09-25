@@ -176,6 +176,7 @@ void do_nni(argparse::ArgumentParser nni) {
         args.stdout_flag = false;
         args.outfilename = (char*) output_tree.c_str();
         args.ntrees = 1;
+        args.expblen = 0;
 
         DMAT* dmat = NJ_parse_distance_matrix(&args);
         if (!dmat) {
@@ -326,7 +327,7 @@ void do_nni(argparse::ArgumentParser nni) {
     std::ofstream info_output(nni.get<std::string>("-o") + "_info.json", std::ios::out);
     info_output << progress_information.dump() << "\n";
 
-    std::ofstream cn_profile_output(nni.get<std::string>("-o") + "_cn_profile.csv", std::ios::out);
+    std::ofstream cn_profile_output(nni.get<std::string>("-o") + "_ancestral_cn_profile.csv", std::ios::out);
     cn_profile_output << "node,chrom,allele,start,end,cn" << std::endl;
     for (auto u : final_cn_tree.nodes()) {
         auto& d = final_cn_tree[u].data;
