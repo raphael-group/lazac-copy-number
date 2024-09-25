@@ -66,13 +66,10 @@ Subcommands:
 ```
 
 The tool has two modes: distance matrix construction using the ZCNT
-distance and a heuristic tree search algorithm for the ZCNT large
+distance and a tree search algorithm for the ZCNT large
 parsimony problem. The `distance` mode takes copy number profiles as
-input. The `nni` mode takes both copy number profiles and a Newick
-tree as input. If one is interested in inferring a tree from scratch,
-we recommend using the `distance` mode to compute a distance matrix,
-constructing a starting tree using neighbor joining, and then running
-the `nni` mode to improve upon the starting tree using the ZCNT model.
+input. The `nni` mode takes copy number profiles and (optionally) a Newick
+tree as input.
 
 > [!WARNING]
 > Lazac infers an unrooted tree by default.
@@ -80,8 +77,9 @@ the `nni` mode to improve upon the starting tree using the ZCNT model.
 > input profiles and then root the unrooted tree at this sample.
 
 > [!WARNING]
-> Lazac takes a binary tree as input. Please resolve any polytomies 
-> in the input tree before running the Lazac.
+> When passing in a tree, Lazac takes a binary tree as input. 
+> Please resolve any polytomies in the input tree before running 
+> Lazac.
 
 ### Input format
 
@@ -106,6 +104,8 @@ profiles, and progress information regarding the run. The files
 are named and formatted as follows:
 * `PREFIX_tree.newick` is the tree output in Newick format with branch lengths representing the ZCNT distance 
    between the two nodes. Internal nodes are prefixed with the string `internal_`. 
+* `PREFIX_nj_tree.newick` is an NJ tree output in Newick format with branch lengths used by the tree search
+   algorithm as a starting tree.
 * `PREFIX_cn_profile.csv` contains the inferred copy number profiles at the internal nodes of the tree. Each
    row provides the copy number of a specific node at a specific genomic bin. Both internal and leaf nodes are
    included in the output.
@@ -115,8 +115,35 @@ are named and formatted as follows:
 ## Usage Example
 
 We will construct a topology on bulk tumor sequencing data from
-patient 8 studied in Gundem et al. 2015. First, we will
-compute the distance matrix using the following command:
+patient 8 studied in Gundem et al. 2015. 
+
+### Option 1: Constructing a tree from scratch
+
+When constructing a tree from scratch, we can simply run the following
+command:
+```
+$ lazac nni examples/PTX008_cn_profile.csv -a 2 -o examples/PTX008
+```
+
+This will output the tree, ancestral copy number profiles, the seed tree,
+and progress information in the `examples/` directory with `PTX008` prefix.
+
+Finally, we can root our tree at a desired node. For best results, add
+a fake, diploid normal sample to the input set of profiles and root 
+the tree at this sample.
+
+```
+$ python scripts/root.py examples/PTX008_zcnt_tree.newick [ROOT] --output [OUTPUT.NEWICK]
+```
+
+### Option 2: Passing in a seed tree
+
+When passing in a seed tree, the tree search algorithm will start from
+the given tree and attempt to improve upon it. The choice for constructing
+the seed tree is arbitrary. In this example, we will use neighbor joining
+to construct a starting tree.
+
+First, we will compute the distance matrix using the following command:
 ```
 $ lazac distance examples/PTX008_cn_profile.csv -o examples/PTX008
 ```
@@ -125,15 +152,15 @@ Then, we will perform neighbor joining on the distance matrix to
 obtain a starting tree for our large parsimony tree search algorithm and then
 arbitrarily resolve polytomies to make the tree binary
 ```
-$ python scripts/nj.py examples/PTX008_dist_matrix.csv --output examples/PTX008_rcnt_nj_tree.newick
-$ python scripts/resolve_polytomies.py examples/PTX008_rcnt_nj_tree.newick --output examples/PTX008_rcnt_nj_tree.binary.newick
+$ python scripts/nj.py examples/PTX008_dist_matrix.csv --output examples/PTX008_zcnt_nj_tree.newick
+$ python scripts/resolve_polytomies.py examples/PTX008_zcnt_nj_tree.newick --output examples/PTX008_zcnt_nj_tree.binary.newick
 ```
 
 Then, we will run `lazac nni` to improve upon the candidate
 topology.
 
 ```
-$ lazac nni examples/PTX008_cn_profile.csv examples/PTX008_rcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_rcnt
+$ lazac nni examples/PTX008_cn_profile.csv examples/PTX008_zcnt_nj_tree.binary.newick -a 2 -o examples/PTX008_zcnt
 ```
 
 Finally, we can root our tree at a desired node. For best results, add
@@ -141,5 +168,5 @@ a fake, diploid normal sample to the input set of profiles and root
 the tree at this sample.
 
 ```
-$ python scripts/root.py examples/PTX008_rcnt_tree.newick [ROOT] --output [OUTPUT.NEWICK]
+$ python scripts/root.py examples/PTX008_zcnt_tree.newick [ROOT] --output [OUTPUT.NEWICK]
 ```
