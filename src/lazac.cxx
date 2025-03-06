@@ -91,7 +91,7 @@ std::pair<std::vector<string>, std::vector<std::vector<int>>> build_distance_mat
     }
 
     spdlog::info("Finished building {} x {} distance matrix.", names.size(), names.size());
-    return std::make_tuple(names, distance_matrix);
+    return std::make_pair(names, distance_matrix);
 }
 
 void do_distance(argparse::ArgumentParser distance) {
