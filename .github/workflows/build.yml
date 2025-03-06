@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-11]
+        os: [ubuntu-20.04, macos-13]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
       - name: Prepare artifacts
         run: |
           mv artifacts/lazac-ubuntu-20.04/lazac artifacts/lazac-ubuntu
-          mv artifacts/lazac-macos-11/lazac artifacts/lazac-macos
+          mv artifacts/lazac-macos-13/lazac artifacts/lazac-macos
 
       - name: Release
         uses: softprops/action-gh-release@v1
